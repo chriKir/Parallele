@@ -77,8 +77,3 @@ fabric.properties
 *.out
 *.app
 
-Würde .gitignore löschen
-Würde .idea/ löschen
-Würde CMakeLists.txt löschen
-Würde PS1/ löschen
-Würde helloworld/ löschen
