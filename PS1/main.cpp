@@ -5,8 +5,11 @@
 #include <iostream>
 #include <malloc.h>
 #include "ClLoader.h"
+#include "time_ms.h"
 
 //#define PRINT_MTX
+
+// compared to the OpenMP solution this is about 5-6x faster
 
 void printMatrix(int rows, int columns, cl_float * matrix) {
 
@@ -26,9 +29,11 @@ int main() {
 
   try {
 
-    cl_int l = 1024;
-    cl_int m = 1024;
-    cl_int n = 1024;
+    cl_int l = 1000;
+    cl_int m = 1000;
+    cl_int n = 1000;
+
+    unsigned long start_time = time_ms();
 
     cl_float * A = (cl_float *) std::malloc(l*m*sizeof(cl_float));
     cl_float * B = (cl_float *) std::malloc(m*n*sizeof(cl_float));
@@ -86,6 +91,7 @@ int main() {
       printMatrix(l, n, C);
 #endif
 
+    printf("Time: %9lu ms\n", time_ms() - start_time);
 
     delete loader;
     free(A);
