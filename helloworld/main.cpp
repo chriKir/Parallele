@@ -5,6 +5,7 @@
 #include <OpenCL/opencl.h>
 #else
 
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #include <CL/cl.h>
 #include <malloc.h>
 
@@ -36,7 +37,7 @@ int main() {
   fp = fopen(fileName, "r");
   if (!fp) {
     fprintf(stderr, "Failed to load kernel.\n");
-    std::exit(1);
+    return 0;
   }
 
   source_str = (char *) malloc(MAX_SOURCE_SIZE);

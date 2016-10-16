@@ -6,7 +6,9 @@
 #define PARALLELE_CLLOADER_H
 
 
-#include <CL/cl.hpp>
+#include <vector>
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#include <CL/cl.h>
 
 class ClLoader {
 private:
@@ -38,7 +40,9 @@ private:
     void GetContext();
 
 public:
+
     ClLoader(const char *kernel_path);
+    ~ClLoader();
 
     void Build();
 
@@ -46,11 +50,13 @@ public:
 
     cl_mem AddBuffer(cl_mem_flags flags, size_t buffer_size);
 
-    void Run(const size_t local_work_size[2], const size_t global_work_size[2]);
+    void Run(const size_t * local_work_size, const size_t * global_work_size);
 
-    void GetResult(cl_mem &buffer, size_t buffer_size, void *result);
+    void GetResult(cl_mem buffer, size_t buffer_size, cl_float * result);
 
-    static void check_for_errors(cl_int error);
+    static void check_for_errors(cl_int error, int line, const char * file);
+
+    void WriteBuffer(cl_mem buffer, cl_float *array, size_t size);
 };
 
 

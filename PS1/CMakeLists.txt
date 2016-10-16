@@ -4,12 +4,21 @@ project(PS1)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build")
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+set( CMAKE_VERBOSE_MAKEFILE on )
+
 find_package(OpenCL REQUIRED)
-include_directories(${OPENCL_INCLUDE_DIR})
+include_directories(${OpenCL_INCLUDE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
-set(SOURCE_FILES main.cpp ClLoader.cpp ClLoader.h)
+set(SOURCE_FILES
+        main.cpp
+        ClLoader.cpp
+        ClLoader.h)
+
 add_executable(PS1 ${SOURCE_FILES})
 
-target_link_libraries(PS1 ${OPENCL_LIBRARY})
+set_property(TARGET PS1 PROPERTY CXX_STANDARD 11)
+set_property(TARGET PS1 PROPERTY CXX_STANDARD_REQUIRED ON)
+
+target_link_libraries(PS1 ${OpenCL_LIBRARY})

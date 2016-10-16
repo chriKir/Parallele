@@ -2,8 +2,9 @@
 // Created by roland on 13.10.16.
 //
 
-#include <malloc.h>
+#include <stdlib.h>
 #include <iostream>
+#include <malloc.h>
 #include "ClLoader.h"
 
 #define MAX_SOURCE_SIZE (0x100000)
@@ -15,6 +16,24 @@ ClLoader::ClLoader(const char * kernel_path):
   this->LoadKernelFile();
   this->GetContext();
 
+}
+
+ClLoader::~ClLoader() {
+
+  ret_ = clFlush(command_queue_);
+  ret_ = clFinish(command_queue_);
+  ret_ = clReleaseKernel(kernel_);
+  ret_ = clReleaseProgram(program_);
+
+
+  for (cl_mem buffer : buffer_) {
+    ret_ = clReleaseMemObject(buffer);
+  }
+
+  ret_ = clReleaseCommandQueue(command_queue_);
+  ret_ = clReleaseContext(context_);
+
+  free((void *) kernel_source_string_);
 }
 
 void ClLoader::LoadKernelFile() {
@@ -38,15 +57,15 @@ void ClLoader::GetContext() {
 
   // get OpenCL Platforms
   ret_ = clGetPlatformIDs(1, &platform_id_, &ret_num_platforms_);
-  ClLoader::check_for_errors(ret_);
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 
   // get OpenCL Device
   ret_ = clGetDeviceIDs(platform_id_, CL_DEVICE_TYPE_DEFAULT, 1, &device_id_, &ret_num_devices_);
-  ClLoader::check_for_errors(ret_);
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 
   // Create OpenCL context_
   context_ = clCreateContext(NULL, 1, &device_id_, NULL, NULL, &ret_);
-  ClLoader::check_for_errors(ret_);
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 
 }
 
@@ -54,7 +73,7 @@ void ClLoader::Build() {
 
   // Create Command Queue
   command_queue_ = clCreateCommandQueue(context_, device_id_, 0, &ret_);
-  ClLoader::check_for_errors(ret_);
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 
 
   // Create Kernel Program from the source
@@ -64,7 +83,7 @@ void ClLoader::Build() {
       &kernel_source_string_,
       &kernel_source_size_,
       &ret_);
-  ClLoader::check_for_errors(ret_);
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 
   // Build Kernel Program
   ret_ = clBuildProgram(program_, 1, &device_id_, BUILD_OPTIONS, NULL, NULL);
@@ -96,7 +115,7 @@ void ClLoader::Build() {
 
   // Create OpenCL Kernel
   kernel_ = clCreateKernel(program_, "matrix", &ret_);
-  ClLoader::check_for_errors(ret_);
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 }
 
 void ClLoader::AddParameter(void * parameter, size_t size) {
@@ -105,7 +124,7 @@ void ClLoader::AddParameter(void * parameter, size_t size) {
                         kernel_arg_count_++,
                         size,
                         parameter);
-  ClLoader::check_for_errors(ret_);
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 }
 
 cl_mem ClLoader::AddBuffer(cl_mem_flags flags, size_t buffer_size) {
@@ -114,20 +133,35 @@ cl_mem ClLoader::AddBuffer(cl_mem_flags flags, size_t buffer_size) {
   buffer_size_.insert(buffer_size_.end(), buffer_size);
 
   // Create Memory Buffers
-  buffer_.insert(buffer_.end(), clCreateBuffer(context_, flags, buffer_size, NULL, &ret_));
-  ClLoader::check_for_errors(ret_);
+  buffer_.push_back(clCreateBuffer(context_, flags, buffer_size, NULL, &ret_));
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 
   // Set OpenCL Kernel Parameters
   ret_ = clSetKernelArg(kernel_,
                         kernel_arg_count_++,
                         sizeof(cl_mem),
                         &buffer_.back());
-  ClLoader::check_for_errors(ret_);
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 
   return buffer_.back();
 }
 
-void ClLoader::Run(const size_t local_work_size[2], const size_t global_work_size[2]) {
+void ClLoader::WriteBuffer(cl_mem buffer, cl_float * array, size_t size) {
+  ret_ = clEnqueueWriteBuffer(command_queue_,
+                              buffer,
+                              CL_TRUE,    // blocking write
+                              0,          // offset
+                              size,
+                              array,
+                              0,
+                              NULL,
+                              NULL
+  );
+
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
+}
+
+void ClLoader::Run(const size_t * local_work_size, const size_t * global_work_size) {
   // Execute OpenCL Kernel
   cl_event event;
 
@@ -141,27 +175,28 @@ void ClLoader::Run(const size_t local_work_size[2], const size_t global_work_siz
                                 0,
                                 NULL,
                                 &event);
-  ClLoader::check_for_errors(ret_);
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 
   ret_ = clWaitForEvents(1, &event);
-  ClLoader::check_for_errors(ret_);
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 }
 
-void ClLoader::GetResult(cl_mem &buffer, size_t buffer_size, void * result) {
+void ClLoader::GetResult(cl_mem buffer, size_t buffer_size, cl_float * result) {
 
   // Copy results from the memory buffer
   ret_ = clEnqueueReadBuffer(command_queue_,
                             buffer,
                             CL_TRUE,
                             0,
-                            buffer_size * sizeof(char),
+                            buffer_size,
                             result,
                             0,
                             NULL,
                             NULL);
+  ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 }
 
-void ClLoader::check_for_errors(cl_int error) {
+void ClLoader::check_for_errors(cl_int error, int line, const char * file) {
 
   if (error == CL_SUCCESS) {
     return;
@@ -169,7 +204,6 @@ void ClLoader::check_for_errors(cl_int error) {
     std::string err;
 
     switch(error){
-      case 0: err = "CL_SUCCESS"; break;
       case -1: err = "CL_DEVICE_NOT_FOUND"; break;
       case -2: err = "CL_DEVICE_NOT_AVAILABLE"; break;
       case -3: err = "CL_COMPILER_NOT_AVAILABLE"; break;
@@ -241,8 +275,10 @@ void ClLoader::check_for_errors(cl_int error) {
       default: err = "Unknown OpenCL error"; break;
     }
 
-    std::cerr << "OpenCL Error: " << err << "\n";
+    std::cerr << "OpenCL Error in " << file << ":" << line << " " << err << "\n";
   }
 }
+
+
 
 
