@@ -1,5 +1,5 @@
 //
-// Created by roland on 13.10.16.
+// Created by Roland Gritzer on 13.10.16.
 //
 
 #include <iostream>
@@ -9,7 +9,9 @@
 
 //#define PRINT_MTX
 
-// compared to the OpenMP solution this is about 5-6x faster
+// compared to the OpenMP solution this is about 5-6x faster on NVIDIA GTX 1060   (2500ms / 410ms)
+// on a Intel Core i7-3517U this is 3-4x faster (4850ms / 1400ms)
+
 
 void printMatrix(int rows, int columns, cl_float * matrix) {
 
@@ -35,20 +37,12 @@ int main() {
 
     unsigned long start_time = time_ms();
 
-    cl_float * A = (cl_float *) std::malloc(l*m*sizeof(cl_float));
-    cl_float * B = (cl_float *) std::malloc(m*n*sizeof(cl_float));
-    cl_float * C = (cl_float *) std::malloc(l*n*sizeof(cl_float));
+    cl_float *A = (cl_float *) std::malloc(l * m * sizeof(cl_float));
+    cl_float *B = (cl_float *) std::malloc(m * n * sizeof(cl_float));
+    cl_float *C = (cl_float *) std::malloc(l * n * sizeof(cl_float));
 
-//    A[0] = 0; A[1] = 1; A[2] = 2;
-//    A[3] = 3; A[4] = 4; A[5] = 5;
-//    A[4] = 4; A[5] = 5; A[6] = 6;
-//
-//    B[0] = 0; B[1] = 1; B[2] = 2; B[3] = 6;
-//    B[4] = 1; B[5] = 2; B[6] = 0; B[7] = 1;
-//    B[8] = 2; B[9] = 0; B[10] = 6; B[11] = 9;
-
-    for (int i=0; i<l*m; i++) { A[i] = (cl_float) (3.6 * i + i * i + 3.1); }
-    for (int i=0; i<m*n; i++) { B[i] = (cl_float) (1.2 * i + 0.01 * i * i + 13.9); }
+    for (int i = 0; i < l * m; i++) { A[i] = (cl_float) (3.6 * i + i * i + 3.1); }
+    for (int i = 0; i < m * n; i++) { B[i] = (cl_float) (1.2 * i + 0.01 * i * i + 13.9); }
     for (int i=0; i<l*n; i++) { C[i] = 0.0; }
 
 
