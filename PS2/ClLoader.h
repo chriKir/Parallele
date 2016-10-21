@@ -10,16 +10,25 @@
 #include <malloc.h>
 
 #include <vector>
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #include <CL/cl.h>
 
 #define MAX_SOURCE_SIZE 1024*1024*4
 
+struct ClException : public std::exception
+{
+   std::string s;
+   ClException(std::string ss) : s(ss) {}
+   ~ClException() throw () {}
+   const char* what() const throw() { return s.c_str(); }
+};
+
 // check __err for ocl success and print message in case of error
 #define CL_ERRCHECK(__err) \
 if(__err != CL_SUCCESS) { \
-	fprintf(stderr, "OpenCL Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
-	fprintf(stderr, "Error code: %s\n",  (__err)); \
-	throw -1; \
+	fprintf(stderr, "OpenCL Assertion failure in %s:%d:\n", __FILE__, __LINE__); \
+	fprintf(stderr, "Error code: %s\n",  ClLoader::get_error_string(__err)); \
+	throw ClException("ClException"); \
 }
 
 class ClLoader {
@@ -29,7 +38,7 @@ private:
     cl_command_queue command_queue_ = NULL;
 
     cl_program program_ = NULL;
-    cl_platform_id platform_id_ = NULL;
+    cl_platform_id * platforms_ = NULL;
 
     std::vector<cl_mem> buffer_;
     std::vector<size_t> buffer_size_;
@@ -40,9 +49,8 @@ private:
     cl_int ret_;
 
     std::string kernel_path_;
-    const char *kernel_source_string_;
+    const char * kernel_source_string_;
 
-    //TODO: try without
     size_t kernel_source_size_ = 0;
 
     cl_kernel kernel_ = NULL;
@@ -53,7 +61,7 @@ private:
 
 public:
 
-    ClLoader(const char *kernel_path);
+    ClLoader(const char *kernel_path, cl_uint num);
     ~ClLoader();
 
     void Build();
@@ -66,9 +74,11 @@ public:
 
     void GetResult(cl_mem buffer, size_t buffer_size, cl_float * result);
 
-    static const char * check_for_errors(cl_int error);
-
     void WriteBuffer(cl_mem buffer, cl_float *array, size_t size);
+
+		static const char * get_error_string(cl_int error);
+
+    const char* GetDeviceDescription(const cl_device_id device);
 };
 
 

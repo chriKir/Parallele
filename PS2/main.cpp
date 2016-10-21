@@ -57,7 +57,7 @@ int main() {
       }
     }
 
-    ClLoader *loader = new ClLoader("../matrix.c");
+    ClLoader *loader = new ClLoader("../matrix.c", 1);
 
     loader->Build();
 
@@ -74,9 +74,8 @@ int main() {
     loader->WriteBuffer(buffer_c, C, l * n * sizeof(cl_float));
 
     const size_t global[2] = {(size_t)l, (size_t)n};
-    const size_t local[2] = {(size_t)l, (size_t)n};
 
-    loader->Run(local, global);
+    loader->Run(NULL, global);
 
     loader->GetResult(buffer_c, l * n * sizeof(cl_float), C);
 

@@ -6,10 +6,6 @@
       <sourceFolder url="file://$MODULE_DIR$/PS2/main.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/PS2/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/PS2/ClLoader.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/PS1/ClLoader.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/PS1/main.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/PS1/CMakeLists.txt" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/PS1/ClLoader.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />

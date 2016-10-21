@@ -2,15 +2,22 @@
 // Created by roland on 13.10.16.
 //
 
+#include <assert.h>
+#include <sstream>
 #include "ClLoader.h"
 
 //#define MAX_SOURCE_SIZE (0x100000)
 #define BUILD_OPTIONS "-Werror -cl-std=CL1.2"
 
-ClLoader::ClLoader(const char * kernel_path):
+/**
+ * initializes OpenCl Device
+ * @param kernel_path
+ * @param num device number
+ * @return
+ */
+ClLoader::ClLoader(const char * kernel_path, cl_uint num):
   kernel_path_(kernel_path)
 {
-  this->LoadKernelFile();
   this->GetContext();
 
 }
@@ -30,6 +37,8 @@ ClLoader::~ClLoader() {
   ret_ = clReleaseCommandQueue(command_queue_);
   ret_ = clReleaseContext(context_);
 
+  free(device_id_);
+  free(platforms_);
   free((void *) kernel_source_string_);
 }
 
@@ -52,26 +61,92 @@ void ClLoader::LoadKernelFile() {
 
 void ClLoader::GetContext() {
 
+  // get number of Platforms
+  ret_ = clGetPlatformIDs(0, NULL, &ret_num_platforms_);
+  CL_ERRCHECK(ret_);
+
+  platforms_ = (cl_platform_id *) malloc(sizeof(cl_platform_id) * ret_num_platforms_);
+
   // get OpenCL Platforms
-  ret_ = clGetPlatformIDs(1, &platform_id_, &ret_num_platforms_);
+  ret_ = clGetPlatformIDs(ret_num_platforms_, platforms_, NULL);
   CL_ERRCHECK(ret_);
 
-  // get OpenCL Device
-  ret_ = clGetDeviceIDs(platform_id_, CL_DEVICE_TYPE_DEFAULT, 1, &device_id_, &ret_num_devices_);
-  CL_ERRCHECK(ret_);
+  // list all devices
+  for (cl_uint i = 0; i < ret_num_platforms_; ++i) {
 
-  // Create OpenCL context_
+    // get number of devices for this platform
+    ret_ = clGetDeviceIDs(platforms_[i], CL_DEVICE_TYPE_ALL, 0, NULL, &ret_num_devices_);
+    CL_ERRCHECK(ret_);
+
+
+      //
+      cl_device_id * devices = (cl_device_id *) malloc(sizeof(cl_device_id) * ret_num_devices_);
+
+      ret_ = clGetDeviceIDs(platforms_[i], CL_DEVICE_TYPE_ALL, ret_num_devices_, devices, NULL);
+      CL_ERRCHECK(ret_);
+
+    for (cl_uint j = 0; j < ret_num_devices_; ++j) {
+      std::cout << "(" << i << ")" << GetDeviceDescription(devices[j]) << std::endl;
+    }
+  }
+
+  std::string input = "";
+  int choise = 0;
+
+  while (true) {
+    std::cout << "Please choose device:";
+    std::getline(std::cin, input);
+
+   std::stringstream myStream(input);
+   if (myStream >> choise)                  // TODO: check if valid
+     break;
+
+   std::cout << "Invalid number, please try again" << std::endl;
+  }
+
+  // Create OpenCL context
   context_ = clCreateContext(NULL, 1, &device_id_, NULL, NULL, &ret_);
   CL_ERRCHECK(ret_);
-
-}
-
-void ClLoader::Build() {
 
   // Create Command Queue
   command_queue_ = clCreateCommandQueue(context_, device_id_, 0, &ret_);
   CL_ERRCHECK(ret_);
 
+}
+
+const char* device_type_string(cl_device_type type) {
+  switch(type){
+    case CL_DEVICE_TYPE_CPU: return "CPU";
+    case CL_DEVICE_TYPE_GPU: return "GPU";
+    case CL_DEVICE_TYPE_ACCELERATOR: return "ACC";
+    default: return "UNKNOWN";
+  }
+
+}
+
+cl_device_type get_device_type(cl_device_id device) {
+  cl_device_type retval;
+  CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_TYPE, sizeof(retval), &retval, NULL));
+  return retval;
+}
+
+
+#define MAX_DEVICES 16
+const char* ClLoader::GetDeviceDescription(const cl_device_id device) {
+  static char description[128];
+
+    char name[255], vendor[255];
+    CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_NAME, 255, name, NULL));
+    CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_VENDOR, 255, vendor, NULL));
+    sprintf(description, "%s  |  %s  |  %s", name, vendor, device_type_string(get_device_type(device)));
+
+  return description;
+}
+
+
+void ClLoader::Build() {
+
+  this->LoadKernelFile();
 
   // Create Kernel Program from the source
   program_ = clCreateProgramWithSource(
@@ -126,7 +201,6 @@ void ClLoader::AddParameter(void * parameter, size_t size) {
 
 cl_mem ClLoader::AddBuffer(cl_mem_flags flags, size_t buffer_size) {
 
-  //TODO: needed??
   buffer_size_.insert(buffer_size_.end(), buffer_size);
 
   // Create Memory Buffers
@@ -193,85 +267,80 @@ void ClLoader::GetResult(cl_mem buffer, size_t buffer_size, cl_float * result) {
   CL_ERRCHECK(ret_);
 }
 
-const char *ClLoader::check_for_errors(cl_int error) {
-
-  std::string err;
+const char * ClLoader::get_error_string(cl_int error) {
 
   switch (error) {
-    case -1: err = "CL_DEVICE_NOT_FOUND"; break;
-    case -2: err = "CL_DEVICE_NOT_AVAILABLE"; break;
-    case -3: err = "CL_COMPILER_NOT_AVAILABLE"; break;
-    case -4: err = "CL_MEM_OBJECT_ALLOCATION_FAILURE"; break;
-    case -5: err = "CL_OUT_OF_RESOURCES"; break;
-    case -6: err = "CL_OUT_OF_HOST_MEMORY"; break;
-    case -7: err = "CL_PROFILING_INFO_NOT_AVAILABLE"; break;
-    case -8: err = "CL_MEM_COPY_OVERLAP"; break;
-    case -9: err = "CL_IMAGE_FORMAT_MISMATCH"; break;
-    case -10: err = "CL_IMAGE_FORMAT_NOT_SUPPORTED"; break;
-    case -11: err = "CL_BUILD_PROGRAM_FAILURE"; break;
-    case -12: err = "CL_MAP_FAILURE"; break;
-    case -13: err = "CL_MISALIGNED_SUB_BUFFER_OFFSET"; break;
-    case -14: err = "CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST"; break;
-    case -15: err = "CL_COMPILE_PROGRAM_FAILURE"; break;
-    case -16: err = "CL_LINKER_NOT_AVAILABLE"; break;
-    case -17: err = "CL_LINK_PROGRAM_FAILURE"; break;
-    case -18: err = "CL_DEVICE_PARTITION_FAILED"; break;
-    case -19: err = "CL_KERNEL_ARG_INFO_NOT_AVAILABLE"; break;
+    case -1: return "CL_DEVICE_NOT_FOUND";
+    case -2: return "CL_DEVICE_NOT_AVAILABLE";
+    case -3: return "CL_COMPILER_NOT_AVAILABLE";
+    case -4: return "CL_MEM_OBJECT_ALLOCATION_FAILURE";
+    case -5: return "CL_OUT_OF_RESOURCES";
+    case -6: return "CL_OUT_OF_HOST_MEMORY";
+    case -7: return "CL_PROFILING_INFO_NOT_AVAILABLE";
+    case -8: return "CL_MEM_COPY_OVERLAP";
+    case -9: return "CL_IMAGE_FORMAT_MISMATCH";
+    case -10: return "CL_IMAGE_FORMAT_NOT_SUPPORTED";
+    case -11: return "CL_BUILD_PROGRAM_FAILURE";
+    case -12: return "CL_MAP_FAILURE";
+    case -13: return "CL_MISALIGNED_SUB_BUFFER_OFFSET";
+    case -14: return "CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST";
+    case -15: return "CL_COMPILE_PROGRAM_FAILURE";
+    case -16: return "CL_LINKER_NOT_AVAILABLE";
+    case -17: return "CL_LINK_PROGRAM_FAILURE";
+    case -18: return "CL_DEVICE_PARTITION_FAILED";
+    case -19: return "CL_KERNEL_ARG_INFO_NOT_AVAILABLE";
 
-      // compile-time errors break;
-    case -30: err = "CL_INVALID_VALUE"; break;
-    case -31: err = "CL_INVALID_DEVICE_TYPE"; break;
-    case -32: err = "CL_INVALID_PLATFORM"; break;
-    case -33: err = "CL_INVALID_DEVICE"; break;
-    case -34: err = "CL_INVALID_CONTEXT"; break;
-    case -35: err = "CL_INVALID_QUEUE_PROPERTIES"; break;
-    case -36: err = "CL_INVALID_COMMAND_QUEUE"; break;
-    case -37: err = "CL_INVALID_HOST_PTR"; break;
-    case -38: err = "CL_INVALID_MEM_OBJECT"; break;
-    case -39: err = "CL_INVALID_IMAGE_FORMAT_DESCRIPTOR"; break;
-    case -40: err = "CL_INVALID_IMAGE_SIZE"; break;
-    case -41: err = "CL_INVALID_SAMPLER"; break;
-    case -42: err = "CL_INVALID_BINARY"; break;
-    case -43: err = "CL_INVALID_BUILD_OPTIONS"; break;
-    case -44: err = "CL_INVALID_PROGRAM"; break;
-    case -45: err = "CL_INVALID_PROGRAM_EXECUTABLE"; break;
-    case -46: err = "CL_INVALID_KERNEL_NAME"; break;
-    case -47: err = "CL_INVALID_KERNEL_DEFINITION"; break;
-    case -48: err = "CL_INVALID_KERNEL"; break;
-    case -49: err = "CL_INVALID_ARG_INDEX"; break;
-    case -50: err = "CL_INVALID_ARG_VALUE"; break;
-    case -51: err = "CL_INVALID_ARG_SIZE"; break;
-    case -52: err = "CL_INVALID_KERNEL_ARGS"; break;
-    case -53: err = "CL_INVALID_WORK_DIMENSION"; break;
-    case -54: err = "CL_INVALID_WORK_GROUP_SIZE"; break;
-    case -55: err = "CL_INVALID_WORK_ITEM_SIZE"; break;
-    case -56: err = "CL_INVALID_GLOBAL_OFFSET"; break;
-    case -57: err = "CL_INVALID_EVENT_WAIT_LIST"; break;
-    case -58: err = "CL_INVALID_EVENT"; break;
-    case -59: err = "CL_INVALID_OPERATION"; break;
-    case -60: err = "CL_INVALID_GL_OBJECT"; break;
-    case -61: err = "CL_INVALID_BUFFER_SIZE"; break;
-    case -62: err = "CL_INVALID_MIP_LEVEL"; break;
-    case -63: err = "CL_INVALID_GLOBAL_WORK_SIZE"; break;
-    case -64: err = "CL_INVALID_PROPERTY"; break;
-    case -65: err = "CL_INVALID_IMAGE_DESCRIPTOR"; break;
-    case -66: err = "CL_INVALID_COMPILER_OPTIONS"; break;
-    case -67: err = "CL_INVALID_LINKER_OPTIONS"; break;
-    case -68: err = "CL_INVALID_DEVICE_PARTITION_COUNT"; break;
+      // compile-time errors
+    case -30: return "CL_INVALID_VALUE";
+    case -31: return "CL_INVALID_DEVICE_TYPE";
+    case -32: return "CL_INVALID_PLATFORM";
+    case -33: return "CL_INVALID_DEVICE";
+    case -34: return "CL_INVALID_CONTEXT";
+    case -35: return "CL_INVALID_QUEUE_PROPERTIES";
+    case -36: return "CL_INVALID_COMMAND_QUEUE";
+    case -37: return "CL_INVALID_HOST_PTR";
+    case -38: return "CL_INVALID_MEM_OBJECT";
+    case -39: return "CL_INVALID_IMAGE_FORMAT_DESCRIPTOR";
+    case -40: return "CL_INVALID_IMAGE_SIZE";
+    case -41: return "CL_INVALID_SAMPLER";
+    case -42: return "CL_INVALID_BINARY";
+    case -43: return "CL_INVALID_BUILD_OPTIONS";
+    case -44: return "CL_INVALID_PROGRAM";
+    case -45: return "CL_INVALID_PROGRAM_EXECUTABLE";
+    case -46: return "CL_INVALID_KERNEL_NAME";
+    case -47: return "CL_INVALID_KERNEL_DEFINITION";
+    case -48: return "CL_INVALID_KERNEL";
+    case -49: return "CL_INVALID_ARG_INDEX";
+    case -50: return "CL_INVALID_ARG_VALUE";
+    case -51: return "CL_INVALID_ARG_SIZE";
+    case -52: return "CL_INVALID_KERNEL_ARGe";
+    case -53: return "CL_INVALID_WORK_DIMENSION";
+    case -54: return "CL_INVALID_WORK_GROUP_SIZE";
+    case -55: return "CL_INVALID_WORK_ITEM_SIZE";
+    case -56: return "CL_INVALID_GLOBAL_OFFSET";
+    case -57: return "CL_INVALID_EVENT_WAIT_LIST";
+    case -58: return "CL_INVALID_EVENT";
+    case -59: return "CL_INVALID_OPERATION";
+    case -60: return "CL_INVALID_GL_OBJECT";
+    case -61: return "CL_INVALID_BUFFER_SIZE";
+    case -62: return "CL_INVALID_MIP_LEVEL";
+    case -63: return "CL_INVALID_GLOBAL_WORK_SIZE";
+    case -64: return "CL_INVALID_PROPERTY";
+    case -65: return "CL_INVALID_IMAGE_DESCRIPTOR";
+    case -66: return "CL_INVALID_COMPILER_OPTIONS";
+    case -67: return "CL_INVALID_LINKER_OPTIONS";
+    case -68: return "CL_INVALID_DEVICE_PARTITION_COUNT";
 
       // extension errors
-    case -1000: err = "CL_INVALID_GL_SHAREGROUP_REFERENCE_KHR"; break;
-    case -1001: err = "CL_PLATFORM_NOT_FOUND_KHR"; break;
-    case -1002: err = "CL_INVALID_D3D10_DEVICE_KHR"; break;
-    case -1003: err = "CL_INVALID_D3D10_RESOURCE_KHR"; break;
-    case -1004: err = "CL_D3D10_RESOURCE_ALREADY_ACQUIRED_KHR"; break;
-    case -1005: err = "CL_D3D10_RESOURCE_NOT_ACQUIRED_KHR"; break;
-    default: err = "Unknown OpenCL error"; break;
+    case -1000: return "CL_INVALID_GL_SHAREGROUP_REFERENCE_KHR";
+    case -1001: return "CL_PLATFORM_NOT_FOUND_KHR";
+    case -1002: return "CL_INVALID_D3D10_DEVICE_KHR";
+    case -1003: return "CL_INVALID_D3D10_RESOURCE_KHR";
+    case -1004: return "CL_D3D10_RESOURCE_ALREADY_ACQUIRED_KHR";
+    case -1005: return "CL_D3D10_RESOURCE_NOT_ACQUIRED_KHR";
+    default: return "Unknown OpenCL error";
 
   }
-
-  return err.c_str();
-
 }
 
 
