@@ -2,23 +2,88 @@
 // Created by roland on 13.10.16.
 //
 
-#include <assert.h>
 #include <sstream>
+#include <cstring>
 #include "ClLoader.h"
 
-//#define MAX_SOURCE_SIZE (0x100000)
 #define BUILD_OPTIONS "-Werror -cl-std=CL1.2"
 
-/**
- * initializes OpenCl Device
- * @param kernel_path
- * @param num device number
- * @return
- */
-ClLoader::ClLoader(const char * kernel_path, cl_uint num):
+
+ClLoader::ClLoader(const char * kernel_path, int device_nr):
   kernel_path_(kernel_path)
 {
-  this->GetContext();
+  // get number of Platforms
+  ret_ = clGetPlatformIDs(0, NULL, &ret_num_platforms_);
+  CL_ERRCHECK(ret_);
+
+  platforms_ = (cl_platform_id *) malloc(sizeof(cl_platform_id) * ret_num_platforms_);
+
+  // get OpenCL Platforms
+  ret_ = clGetPlatformIDs(ret_num_platforms_, platforms_, NULL);
+  CL_ERRCHECK(ret_);
+
+  size_t size = 0;
+  // list all devices
+  for (cl_uint i = 0; i < ret_num_platforms_; ++i) {
+
+    // get number of devices for this platform
+    ret_ = clGetDeviceIDs(platforms_[i], CL_DEVICE_TYPE_ALL, 0, NULL, &ret_num_devices_);
+    CL_ERRCHECK(ret_);
+
+    // allocate temporary memory for devices
+    cl_device_id * devices = (cl_device_id *) realloc(devices_, sizeof(cl_device_id) * ret_num_devices_);
+
+    ret_ = clGetDeviceIDs(platforms_[i], CL_DEVICE_TYPE_ALL, ret_num_devices_, devices, NULL);
+    CL_ERRCHECK(ret_);
+
+    for (cl_uint j = 0; j < ret_num_devices_; ++j) {
+      std::cout << "(" << i << ")" << get_device_description(devices[j]) << std::endl;
+    }
+
+    // add device_ids to devices_
+    size_t offset = size;
+    size += sizeof(cl_device_id) * ret_num_devices_;
+    devices_ = (cl_device_id *) realloc(devices_, size);
+    std::memcpy(&devices_[offset], &devices[0], size - offset);
+
+    free(devices);
+  }
+
+  size_t choice;
+
+  if (device_nr == -1) {
+    std::string input = "";
+
+    while (true) {
+      std::cout << "Please choose device: ";
+      std::getline(std::cin, input);
+
+      std::stringstream myStream(input);
+      if (myStream >> choice && choice < size / sizeof(cl_device_id))
+        break;
+
+      std::cout << "Invalid device, please try again" << std::endl;
+    }
+
+    device_id_ = devices_[choice];
+
+  } else {
+    if (device_nr <= size / sizeof(cl_device_id)) {
+      device_id_ = devices_[device_nr];
+    } else {
+      char error[255];
+      sprintf(error, "Device %d is not available.\n", device_nr);
+      throw ClException(error);
+    }
+  }
+
+  // Create OpenCL context
+  context_ = clCreateContext(NULL, 1, &device_id_, NULL, NULL, &ret_);
+  CL_ERRCHECK(ret_);
+
+  // Create Command Queue
+  command_queue_ = clCreateCommandQueue(context_, device_id_, 0, &ret_);
+  CL_ERRCHECK(ret_);
 
 }
 
@@ -37,7 +102,7 @@ ClLoader::~ClLoader() {
   ret_ = clReleaseCommandQueue(command_queue_);
   ret_ = clReleaseContext(context_);
 
-  free(device_id_);
+  free(devices_);
   free(platforms_);
   free((void *) kernel_source_string_);
 }
@@ -50,7 +115,7 @@ void ClLoader::LoadKernelFile() {
   fp = fopen(kernel_path_.c_str(), "r");
 
   if (!fp) {
-    fprintf(stderr, "Failed to load kernel.\n");
+    std::cerr << "Failed to load kernel." << std::endl;
   }
 
   kernel_source_string_ = (char *) malloc(MAX_SOURCE_SIZE);
@@ -58,91 +123,6 @@ void ClLoader::LoadKernelFile() {
 
   fclose(fp);
 }
-
-void ClLoader::GetContext() {
-
-  // get number of Platforms
-  ret_ = clGetPlatformIDs(0, NULL, &ret_num_platforms_);
-  CL_ERRCHECK(ret_);
-
-  platforms_ = (cl_platform_id *) malloc(sizeof(cl_platform_id) * ret_num_platforms_);
-
-  // get OpenCL Platforms
-  ret_ = clGetPlatformIDs(ret_num_platforms_, platforms_, NULL);
-  CL_ERRCHECK(ret_);
-
-  // list all devices
-  for (cl_uint i = 0; i < ret_num_platforms_; ++i) {
-
-    // get number of devices for this platform
-    ret_ = clGetDeviceIDs(platforms_[i], CL_DEVICE_TYPE_ALL, 0, NULL, &ret_num_devices_);
-    CL_ERRCHECK(ret_);
-
-
-      //
-      cl_device_id * devices = (cl_device_id *) malloc(sizeof(cl_device_id) * ret_num_devices_);
-
-      ret_ = clGetDeviceIDs(platforms_[i], CL_DEVICE_TYPE_ALL, ret_num_devices_, devices, NULL);
-      CL_ERRCHECK(ret_);
-
-    for (cl_uint j = 0; j < ret_num_devices_; ++j) {
-      std::cout << "(" << i << ")" << GetDeviceDescription(devices[j]) << std::endl;
-    }
-  }
-
-  std::string input = "";
-  int choise = 0;
-
-  while (true) {
-    std::cout << "Please choose device:";
-    std::getline(std::cin, input);
-
-   std::stringstream myStream(input);
-   if (myStream >> choise)                  // TODO: check if valid
-     break;
-
-   std::cout << "Invalid number, please try again" << std::endl;
-  }
-
-  // Create OpenCL context
-  context_ = clCreateContext(NULL, 1, &device_id_, NULL, NULL, &ret_);
-  CL_ERRCHECK(ret_);
-
-  // Create Command Queue
-  command_queue_ = clCreateCommandQueue(context_, device_id_, 0, &ret_);
-  CL_ERRCHECK(ret_);
-
-}
-
-const char* device_type_string(cl_device_type type) {
-  switch(type){
-    case CL_DEVICE_TYPE_CPU: return "CPU";
-    case CL_DEVICE_TYPE_GPU: return "GPU";
-    case CL_DEVICE_TYPE_ACCELERATOR: return "ACC";
-    default: return "UNKNOWN";
-  }
-
-}
-
-cl_device_type get_device_type(cl_device_id device) {
-  cl_device_type retval;
-  CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_TYPE, sizeof(retval), &retval, NULL));
-  return retval;
-}
-
-
-#define MAX_DEVICES 16
-const char* ClLoader::GetDeviceDescription(const cl_device_id device) {
-  static char description[128];
-
-    char name[255], vendor[255];
-    CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_NAME, 255, name, NULL));
-    CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_VENDOR, 255, vendor, NULL));
-    sprintf(description, "%s  |  %s  |  %s", name, vendor, device_type_string(get_device_type(device)));
-
-  return description;
-}
-
 
 void ClLoader::Build() {
 
@@ -179,7 +159,7 @@ void ClLoader::Build() {
     clGetProgramBuildInfo(program_, device_id_,
                           CL_PROGRAM_BUILD_LOG, log_size + 1, program_log, NULL);
 
-    printf("Build failed; error=%d, status=%d, programLog:nn%s",
+    fprintf(stderr, "Build failed; error=%d, status=%d, programLog:nn%s",
            ret_, status, program_log);
 
     free(program_log);
@@ -267,6 +247,7 @@ void ClLoader::GetResult(cl_mem buffer, size_t buffer_size, cl_float * result) {
   CL_ERRCHECK(ret_);
 }
 
+
 const char * ClLoader::get_error_string(cl_int error) {
 
   switch (error) {
@@ -343,5 +324,30 @@ const char * ClLoader::get_error_string(cl_int error) {
   }
 }
 
+const char* ClLoader::get_device_description(const cl_device_id device) {
+  static char description[128];
 
+  char name[255], vendor[255];
+  CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_NAME, 255, name, NULL));
+  CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_VENDOR, 255, vendor, NULL));
+  sprintf(description, "%s  |  %s  |  %s", name, vendor, device_type_string(get_device_type(device)));
+
+  return description;
+}
+
+const char* ClLoader::device_type_string(cl_device_type type) {
+  switch(type){
+    case CL_DEVICE_TYPE_CPU: return "CPU";
+    case CL_DEVICE_TYPE_GPU: return "GPU";
+    case CL_DEVICE_TYPE_ACCELERATOR: return "ACC";
+    default: return "UNKNOWN";
+  }
+
+}
+
+cl_device_type ClLoader::get_device_type(cl_device_id device) {
+  cl_device_type retval;
+  CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_TYPE, sizeof(retval), &retval, NULL));
+  return retval;
+}
 

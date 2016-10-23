@@ -9,9 +9,6 @@
 
 //#define PRINT_MTX
 
-// compared to the OpenMP solution this is about 5-6x faster on NVIDIA GTX 1060   (2500ms / 410ms)
-// on a Intel Core i7-3517U this is 3-4x faster (4850ms / 1400ms)
-
 void printMatrix(int rows, int columns, cl_float * matrix) {
 
   for (int i = 0; i < rows; ++i) {
@@ -22,7 +19,7 @@ void printMatrix(int rows, int columns, cl_float * matrix) {
       line.append(std::to_string( matrix[i * columns + j]));
       line.append("]\t");
     }
-    std::cout << line << "\n";
+    std::cout << line << std::endl;
   }
 }
 
@@ -47,7 +44,7 @@ int main() {
 
 #ifdef PRINT_MTX
       printMatrix(l, m, A);
-      std::cout << "\n*\n\n";
+      std::cout << std::endl << "*" << std::endl << std::endl;
       printMatrix(m, n, B);
 #endif
 
@@ -57,7 +54,7 @@ int main() {
       }
     }
 
-    ClLoader *loader = new ClLoader("../matrix.c", 1);
+    ClLoader *loader = new ClLoader("../matrix.c", 2);
 
     loader->Build();
 
@@ -80,7 +77,7 @@ int main() {
     loader->GetResult(buffer_c, l * n * sizeof(cl_float), C);
 
 #ifdef PRINT_MTX
-      std::cout << "\n=\n\n";
+      std::cout << std::endl << "=" << std::endl << std::endl;
       printMatrix(l, n, C);
 #endif
 
@@ -95,8 +92,10 @@ int main() {
 
   } catch (const std::exception &e) {
 
-    std::cerr << "Exception thrown: " << e.what();
-    return 1;
+    std::cout << std::flush;
+    std::cerr << std::flush << "Exception thrown: " << e.what();
+
+    return -1;
   }
 }
 
