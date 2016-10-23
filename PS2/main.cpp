@@ -54,7 +54,7 @@ int main() {
       }
     }
 
-    ClLoader *loader = new ClLoader("../matrix.c", 2);
+    ClLoader *loader = new ClLoader("../matrix.c", -1);
 
     loader->Build();
 

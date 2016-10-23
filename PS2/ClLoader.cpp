@@ -31,7 +31,7 @@ ClLoader::ClLoader(const char * kernel_path, int device_nr):
     CL_ERRCHECK(ret_);
 
     // allocate temporary memory for devices
-    cl_device_id * devices = (cl_device_id *) realloc(devices_, sizeof(cl_device_id) * ret_num_devices_);
+    cl_device_id * devices = (cl_device_id *) malloc(sizeof(cl_device_id) * ret_num_devices_);
 
     ret_ = clGetDeviceIDs(platforms_[i], CL_DEVICE_TYPE_ALL, ret_num_devices_, devices, NULL);
     CL_ERRCHECK(ret_);
@@ -42,9 +42,13 @@ ClLoader::ClLoader(const char * kernel_path, int device_nr):
 
     // add device_ids to devices_
     size_t offset = size;
-    size += sizeof(cl_device_id) * ret_num_devices_;
-    devices_ = (cl_device_id *) realloc(devices_, size);
-    std::memcpy(&devices_[offset], &devices[0], size - offset);
+    size += ret_num_devices_;
+
+    devices_ = (cl_device_id *) realloc(devices_, sizeof(cl_device_id) * ret_num_devices_);
+    //std::memcpy(&devices_[offset], &devices[0], size - offset);
+    for (size_t j = 0; j < ret_num_devices_; ++j) {
+      devices_[offset + j] = devices[j];
+    }
 
     free(devices);
   }
@@ -59,7 +63,7 @@ ClLoader::ClLoader(const char * kernel_path, int device_nr):
       std::getline(std::cin, input);
 
       std::stringstream myStream(input);
-      if (myStream >> choice && choice < size / sizeof(cl_device_id))
+      if (myStream >> choice && choice < size)
         break;
 
       std::cout << "Invalid device, please try again" << std::endl;
@@ -67,8 +71,9 @@ ClLoader::ClLoader(const char * kernel_path, int device_nr):
 
     device_id_ = devices_[choice];
 
+
   } else {
-    if (device_nr <= size / sizeof(cl_device_id)) {
+    if (device_nr <= size) {
       device_id_ = devices_[device_nr];
     } else {
       char error[255];
