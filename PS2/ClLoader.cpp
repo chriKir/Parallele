@@ -6,8 +6,7 @@
 #include <cstring>
 #include "ClLoader.h"
 
-#define BUILD_OPTIONS "-Werror -cl-std=CL1.2"
-
+#define DATA_ONLY true
 
 ClLoader::ClLoader(const char * kernel_path, int device_nr):
   kernel_path_(kernel_path)
@@ -37,7 +36,9 @@ ClLoader::ClLoader(const char * kernel_path, int device_nr):
     CL_ERRCHECK(ret_);
 
     for (cl_uint j = 0; j < ret_num_devices_; ++j) {
-      std::cout << "(" << i << ")" << get_device_description(devices[j]) << std::endl;
+      if (device_nr == -1) {
+        std::cout << "(" << i << ")" << get_device_description(devices[j]) << std::endl;
+      }
     }
 
     // add device_ids to devices_
@@ -45,7 +46,6 @@ ClLoader::ClLoader(const char * kernel_path, int device_nr):
     size += ret_num_devices_;
 
     devices_ = (cl_device_id *) realloc(devices_, sizeof(cl_device_id) * ret_num_devices_);
-    //std::memcpy(&devices_[offset], &devices[0], size - offset);
     for (size_t j = 0; j < ret_num_devices_; ++j) {
       devices_[offset + j] = devices[j];
     }
@@ -73,7 +73,7 @@ ClLoader::ClLoader(const char * kernel_path, int device_nr):
 
 
   } else {
-    if (device_nr <= size) {
+    if (device_nr <= (int) size) {
       device_id_ = devices_[device_nr];
     } else {
       char error[255];
@@ -82,13 +82,13 @@ ClLoader::ClLoader(const char * kernel_path, int device_nr):
     }
   }
 
+  std::cout << "using: " << get_device_description(device_id_) << std::endl;
+
   // Create OpenCL context
   context_ = clCreateContext(NULL, 1, &device_id_, NULL, NULL, &ret_);
   CL_ERRCHECK(ret_);
 
-  // Create Command Queue
-  command_queue_ = clCreateCommandQueue(context_, device_id_, 0, &ret_);
-  CL_ERRCHECK(ret_);
+
 
 }
 
@@ -130,6 +130,10 @@ void ClLoader::LoadKernelFile() {
 }
 
 void ClLoader::Build() {
+
+  // Create Command Queue
+  command_queue_ = clCreateCommandQueue(context_, device_id_, CL_QUEUE_PROFILING_ENABLE, &ret_);
+  CL_ERRCHECK(ret_);
 
   this->LoadKernelFile();
 
@@ -175,34 +179,35 @@ void ClLoader::Build() {
   CL_ERRCHECK(ret_);
 }
 
-void ClLoader::AddParameter(void * parameter, size_t size) {
+void ClLoader::AddParameter(void * parameter, cl_uint arg_index, size_t size) {
 
   ret_ = clSetKernelArg(kernel_,
-                        kernel_arg_count_++,
+                        arg_index,
                         size,
                         parameter);
   CL_ERRCHECK(ret_);
 }
 
-cl_mem ClLoader::AddBuffer(cl_mem_flags flags, size_t buffer_size) {
+cl_mem ClLoader::AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_size) {
 
-  buffer_size_.insert(buffer_size_.end(), buffer_size);
+//  buffer_size_.insert(buffer_size_.end(), buffer_size);
 
   // Create Memory Buffers
-  buffer_.push_back(clCreateBuffer(context_, flags, buffer_size, NULL, &ret_));
+  buffer_[arg_index] = clCreateBuffer(context_, flags, buffer_size, NULL, &ret_);
   CL_ERRCHECK(ret_);
 
   // Set OpenCL Kernel Parameters
   ret_ = clSetKernelArg(kernel_,
-                        kernel_arg_count_++,
+                        arg_index,
                         sizeof(cl_mem),
-                        &buffer_.back());
+                        &buffer_[arg_index]);
   CL_ERRCHECK(ret_);
 
-  return buffer_.back();
+  return buffer_[arg_index];
 }
 
-void ClLoader::WriteBuffer(cl_mem buffer, cl_float * array, size_t size) {
+void ClLoader::WriteBuffer(cl_mem buffer, cl_float * array, cl_uint arg_index, size_t size) {
+
   ret_ = clEnqueueWriteBuffer(command_queue_,
                               buffer,
                               CL_TRUE,    // blocking write
@@ -211,16 +216,13 @@ void ClLoader::WriteBuffer(cl_mem buffer, cl_float * array, size_t size) {
                               array,
                               0,
                               NULL,
-                              NULL
+                              &buffer_events_[arg_index]
   );
 
   CL_ERRCHECK(ret_);
 }
 
 void ClLoader::Run(const size_t * local_work_size, const size_t * global_work_size) {
-  // Execute OpenCL Kernel
-  cl_event event;
-
 
   ret_ = clEnqueueNDRangeKernel(command_queue_,
                                 kernel_,
@@ -230,11 +232,12 @@ void ClLoader::Run(const size_t * local_work_size, const size_t * global_work_si
                                 local_work_size,
                                 0,
                                 NULL,
-                                &event);
+                                &kernel_event_);
   CL_ERRCHECK(ret_);
 
-  ret_ = clWaitForEvents(1, &event);
-  CL_ERRCHECK(ret_);
+//  ret_ = clFinish(command_queue_);
+//  ret_ = clWaitForEvents(1, &kernel_event_);
+//  CL_ERRCHECK(ret_);
 }
 
 void ClLoader::GetResult(cl_mem buffer, size_t buffer_size, cl_float * result) {
@@ -248,10 +251,91 @@ void ClLoader::GetResult(cl_mem buffer, size_t buffer_size, cl_float * result) {
                             result,
                             0,
                             NULL,
-                            NULL);
+                            &buffer_events_[15]);
+
   CL_ERRCHECK(ret_);
+
+//  ret_ = clFinish(command_queue_);
+//  ret_ = clWaitForEvents(1, &buffer_events_[15]);
+//  CL_ERRCHECK(ret_);
 }
 
+void ClLoader::PrintProfileInfo() {
+
+  ret_ = clFinish(command_queue_);
+  ret_ = clWaitForEvents(1, &kernel_event_);
+  CL_ERRCHECK(ret_);
+
+  print_profiling(kernel_event_, "kernel execution");
+
+  for (int j = 0; j < MAX_ARGS - 1; j++) {
+    print_profiling(buffer_events_[j], "write buffer");
+  }
+
+  print_profiling(buffer_events_[MAX_ARGS - 1], "read buffer");
+
+}
+
+void ClLoader::print_profiling(cl_event event, const char * object_string){
+
+  cl_ulong start_time = 0;
+  cl_ulong end_time = 0;
+
+  start_time = 0;
+  end_time = 0;
+
+  ret_ = clGetEventProfilingInfo(
+      event,
+      CL_PROFILING_COMMAND_QUEUED,
+      sizeof(cl_ulong),
+      &start_time,
+      NULL);
+
+  ret_ = clGetEventProfilingInfo(
+      event,
+      CL_PROFILING_COMMAND_END,
+      sizeof(cl_ulong),
+      &end_time,
+      NULL);
+
+  double elapsed = (end_time - start_time) * 0.000001;
+
+  if (elapsed != 0) {
+    if (DATA_ONLY) {
+      std::cout << elapsed << std::endl;
+    } else {
+      std::cout << "Elapsed time to " << object_string << ": " << elapsed << "ms" << std::endl;
+    }
+  }
+
+}
+
+const char* ClLoader::get_device_description(const cl_device_id device) {
+  static char description[128];
+
+  char name[255], vendor[255];
+  CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_NAME, 255, name, NULL));
+  CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_VENDOR, 255, vendor, NULL));
+  sprintf(description, "%s  |  %s  |  %s", name, vendor, device_type_string(get_device_type(device)));
+
+  return description;
+}
+
+const char* ClLoader::device_type_string(cl_device_type type) {
+  switch(type){
+    case CL_DEVICE_TYPE_CPU: return "CPU";
+    case CL_DEVICE_TYPE_GPU: return "GPU";
+    case CL_DEVICE_TYPE_ACCELERATOR: return "ACC";
+    default: return "UNKNOWN";
+  }
+
+}
+
+cl_device_type ClLoader::get_device_type(cl_device_id device) {
+  cl_device_type retval;
+  CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_TYPE, sizeof(retval), &retval, NULL));
+  return retval;
+}
 
 const char * ClLoader::get_error_string(cl_int error) {
 
@@ -327,32 +411,5 @@ const char * ClLoader::get_error_string(cl_int error) {
     default: return "Unknown OpenCL error";
 
   }
-}
-
-const char* ClLoader::get_device_description(const cl_device_id device) {
-  static char description[128];
-
-  char name[255], vendor[255];
-  CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_NAME, 255, name, NULL));
-  CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_VENDOR, 255, vendor, NULL));
-  sprintf(description, "%s  |  %s  |  %s", name, vendor, device_type_string(get_device_type(device)));
-
-  return description;
-}
-
-const char* ClLoader::device_type_string(cl_device_type type) {
-  switch(type){
-    case CL_DEVICE_TYPE_CPU: return "CPU";
-    case CL_DEVICE_TYPE_GPU: return "GPU";
-    case CL_DEVICE_TYPE_ACCELERATOR: return "ACC";
-    default: return "UNKNOWN";
-  }
-
-}
-
-cl_device_type ClLoader::get_device_type(cl_device_id device) {
-  cl_device_type retval;
-  CL_ERRCHECK(clGetDeviceInfo(device, CL_DEVICE_TYPE, sizeof(retval), &retval, NULL));
-  return retval;
 }
 

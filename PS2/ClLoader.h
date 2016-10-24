@@ -13,7 +13,9 @@
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #include <CL/cl.h>
 
+#define BUILD_OPTIONS "-Werror -cl-std=CL1.2"
 #define MAX_SOURCE_SIZE 1024*1024*4
+#define MAX_ARGS 16
 
 // check __err for ocl success and print message in case of error
 #define CL_ERRCHECK(__err) \
@@ -34,12 +36,11 @@ private:
     cl_program program_ = NULL;
     cl_platform_id * platforms_ = NULL;
 
-    std::vector<cl_mem> buffer_;
-    std::vector<size_t> buffer_size_;
+    cl_mem buffer_[MAX_ARGS];
+		cl_event buffer_events_[MAX_ARGS];
 
     cl_uint ret_num_devices_;
     cl_uint ret_num_platforms_;
-    cl_uint kernel_arg_count_ = 0;
     cl_int ret_;
 
     std::string kernel_path_;
@@ -48,6 +49,7 @@ private:
     size_t kernel_source_size_ = 0;
 
     cl_kernel kernel_ = NULL;
+		cl_event kernel_event_ = NULL;
 
     void LoadKernelFile();
 
@@ -74,25 +76,28 @@ public:
 		/**
 		 * Binds basic parameter to the OpenCL Kernel. Use only for basic datatypes as int, float, ...
 		 * @param parameter cast to void*
+		 * @param arg_index index of the argument
 		 * @param size size of the data in byte
 		 */
-    void AddParameter(void *parameter, size_t size);
+    void AddParameter(void *parameter, cl_uint arg_index, size_t size);
 
 		/**
 		 * Binds a Buffer to the OpenCL Kernel.
 		 * @param flags read/write access
+		 * @param arg_index index of the argument
 		 * @param buffer_size size of the array
 		 * @return returns the cl_mem reference
 		 */
-    cl_mem AddBuffer(cl_mem_flags flags, size_t buffer_size);
+    cl_mem AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_size);
 
 		/**
 		 * Writes Data into a buffer
 		 * @param buffer cl_mem reference of the buffer
 		 * @param array array containing data
+		 * @param arg_index index of the argument
 		 * @param size size of the array
 		 */
-		void WriteBuffer(cl_mem buffer, cl_float *array, size_t size);
+		void WriteBuffer(cl_mem buffer, cl_float *array, cl_uint arg_index, size_t size);
 		// TODO: should accept more than cl_float arrays
 
     /**
@@ -109,6 +114,8 @@ public:
 		 * @param result
 		 */
     void GetResult(cl_mem buffer, size_t buffer_size, cl_float * result);
+
+		void PrintProfileInfo();
 
 
 		// Helper functions
@@ -130,6 +137,8 @@ public:
 		const char* device_type_string(cl_device_type type);
 
 		cl_device_type get_device_type(cl_device_id device);
+
+		void print_profiling(cl_event event, const char * object_string);
 
 };
 
