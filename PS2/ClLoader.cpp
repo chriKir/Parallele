@@ -6,10 +6,9 @@
 #include <cstring>
 #include "ClLoader.h"
 
-#define DATA_ONLY false
-
 ClLoader::ClLoader(const char *kernel_path, int device_nr) :
         kernel_path_(kernel_path) {
+
     // get number of Platforms
     ret_ = clGetPlatformIDs(0, NULL, &ret_num_platforms_);
     CL_ERRCHECK(ret_);
@@ -70,7 +69,6 @@ ClLoader::ClLoader(const char *kernel_path, int device_nr) :
 
         device_id_ = devices_[choice];
 
-
     } else {
         if (device_nr <= (int) size) {
             device_id_ = devices_[device_nr];
@@ -86,7 +84,6 @@ ClLoader::ClLoader(const char *kernel_path, int device_nr) :
     // Create OpenCL context
     context_ = clCreateContext(NULL, 1, &device_id_, NULL, NULL, &ret_);
     CL_ERRCHECK(ret_);
-
 
 }
 
@@ -177,18 +174,17 @@ void ClLoader::Build() {
     CL_ERRCHECK(ret_);
 }
 
-void ClLoader::AddParameter(void *parameter, cl_uint arg_index, size_t size) {
+void ClLoader::AddArgument(void *parameter, cl_uint arg_index, size_t size) {
 
     ret_ = clSetKernelArg(kernel_,
                           arg_index,
                           size,
                           parameter);
     CL_ERRCHECK(ret_);
+    argument_count_ = std::max(argument_count_, (size_t) arg_index);
 }
 
 cl_mem ClLoader::AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_size) {
-
-//  buffer_size_.insert(buffer_size_.end(), buffer_size);
 
     // Create Memory Buffers
     buffer_[arg_index] = clCreateBuffer(context_, flags, buffer_size, NULL, &ret_);
@@ -201,6 +197,7 @@ cl_mem ClLoader::AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_
                           &buffer_[arg_index]);
     CL_ERRCHECK(ret_);
 
+    buffer_count_ = std::max(buffer_count_, (size_t) arg_index);
     return buffer_[arg_index];
 }
 
@@ -218,10 +215,6 @@ void ClLoader::WriteBuffer(cl_mem buffer, cl_float *array, cl_uint arg_index, si
     );
 
     CL_ERRCHECK(ret_);
-
-    ret_ = clFinish(command_queue_);
-    ret_ = clWaitForEvents(1, &buffer_events_[arg_index]);
-    CL_ERRCHECK(ret_);
 }
 
 
@@ -233,15 +226,12 @@ void ClLoader::Run(const size_t *local_work_size, const size_t *global_work_size
                                   NULL,
                                   global_work_size,
                                   local_work_size,
-                                  0,
-                                  NULL,
+                                  buffer_count_,
+                                  &buffer_events_[0],
                                   &kernel_event_
     );
     CL_ERRCHECK(ret_);
 
-  ret_ = clFinish(command_queue_);
-  ret_ = clWaitForEvents(1, &kernel_event_);
-  CL_ERRCHECK(ret_);
 }
 
 void ClLoader::ReadBuffer(cl_mem buffer, size_t buffer_size, cl_float *result) {
@@ -253,30 +243,22 @@ void ClLoader::ReadBuffer(cl_mem buffer, size_t buffer_size, cl_float *result) {
                                0,
                                buffer_size,
                                result,
-                               0,
-                               NULL,
-                               &buffer_events_[15]);
-
+                               1,
+                               &kernel_event_,
+                               &buffer_events_[4]);
     CL_ERRCHECK(ret_);
 
-  ret_ = clFinish(command_queue_);
-  ret_ = clWaitForEvents(1, &buffer_events_[15]);
-  CL_ERRCHECK(ret_);
 }
 
 void ClLoader::PrintProfileInfo() {
 
-//  ret_ = clFinish(command_queue_);
-//  ret_ = clWaitForEvents(1, &kernel_event_);
-//  CL_ERRCHECK(ret_);
-
     print_profiling(kernel_event_, "kernel execution");
 
-    for (int j = 0; j < MAX_ARGS - 1; j++) {
+    for (int j = 0; j <= buffer_count_; j++) {
         print_profiling(buffer_events_[j], "write buffer");
     }
 
-    print_profiling(buffer_events_[MAX_ARGS - 1], "read buffer");
+    print_profiling(buffer_events_[4], "read buffer");
 
 }
 
@@ -304,14 +286,11 @@ void ClLoader::print_profiling(cl_event event, const char *object_string) {
 
     double elapsed = (end_time - start_time) * 0.000001;
 
-    if (elapsed != 0) {
-        if (DATA_ONLY) {
-            std::cout << elapsed << std::endl;
-        } else {
-            std::cout << "Elapsed time to " << object_string << ": " << elapsed << "ms" << std::endl;
-        }
-    }
-
+#ifdef DATA_ONLY
+        std::cout << elapsed << ",";
+#else
+        std::cout << "Elapsed time to " << object_string << ": " << elapsed << "ms" << std::endl;
+#endif
 }
 
 const char *ClLoader::get_device_description(const cl_device_id device) {

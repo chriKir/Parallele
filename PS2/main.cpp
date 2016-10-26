@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <malloc.h>
+
 #include "ClLoader.h"
 
 //#define PRINT_MTX
@@ -34,7 +35,7 @@ int main() {
         cl_int l, m, n;
 
 
-        for (int d = 1024; d < 1024 * 8; d *= 2) {
+        for (int d = 4; d < 4097; d *= 2) {
 
             cl_int matrix_size = d;
 
@@ -42,11 +43,11 @@ int main() {
             m = matrix_size;
             n = matrix_size;
 
-            loader->AddParameter(&l, 0, sizeof(cl_int));
-            loader->AddParameter(&m, 1, sizeof(cl_int));
-            loader->AddParameter(&n, 2, sizeof(cl_int));
+            loader->AddArgument(&l, 3, sizeof(cl_int));
+            loader->AddArgument(&m, 4, sizeof(cl_int));
+            loader->AddArgument(&n, 5, sizeof(cl_int));
 
-            std::cout << std::endl << "Matrix size: " << (int) matrix_size << "x" << (int) matrix_size << std::endl;
+            std::cout << std::endl << (int) matrix_size << "x" << (int) matrix_size << ": ";
 
             cl_float *A = (cl_float *) std::malloc(l * m * sizeof(cl_float));
             cl_float *B = (cl_float *) std::malloc(m * n * sizeof(cl_float));
@@ -69,13 +70,13 @@ int main() {
             printMatrix(m, n, B);
 #endif
 
-            cl_mem buffer_a = loader->AddBuffer(CL_MEM_READ_ONLY, 3, l * m * sizeof(cl_float));
-            cl_mem buffer_b = loader->AddBuffer(CL_MEM_READ_ONLY, 4, m * n * sizeof(cl_float));
-            cl_mem buffer_c = loader->AddBuffer(CL_MEM_READ_WRITE, 5, l * n * sizeof(cl_float));
+            cl_mem buffer_a = loader->AddBuffer(CL_MEM_READ_ONLY, 0, l * m * sizeof(cl_float));
+            cl_mem buffer_b = loader->AddBuffer(CL_MEM_READ_ONLY, 1, m * n * sizeof(cl_float));
+            cl_mem buffer_c = loader->AddBuffer(CL_MEM_READ_WRITE, 2, l * n * sizeof(cl_float));
 
-            loader->WriteBuffer(buffer_a, A, 3, l * m * sizeof(cl_float));
-            loader->WriteBuffer(buffer_b, B, 4, m * n * sizeof(cl_float));
-            loader->WriteBuffer(buffer_c, C, 5, l * n * sizeof(cl_float));
+            loader->WriteBuffer(buffer_a, A, 0, l * m * sizeof(cl_float));
+            loader->WriteBuffer(buffer_b, B, 1, m * n * sizeof(cl_float));
+            loader->WriteBuffer(buffer_c, C, 2, l * n * sizeof(cl_float));
 
             const size_t global[2] = {(size_t) l, (size_t) n};
 
@@ -89,15 +90,6 @@ int main() {
 #endif
 
             loader->PrintProfileInfo();
-
-//      for (int i = 0; i < l; ++i) {
-//        for (int j = 0; j < n; ++j) {
-//          if (C[i * n + j] != A[i * n + j])
-//            correct = false;
-//        }
-//      }
-
-//      std::cout << "The calculation was " << correct ? "correct" : "incorrect";
 
             free(A);
             free(B);

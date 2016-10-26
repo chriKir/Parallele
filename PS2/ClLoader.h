@@ -12,12 +12,13 @@
 #include <vector>
 
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
-
 #include <CL/cl.h>
+
+#define MAX_ARGS 8
+#define DATA_ONLY
 
 #define BUILD_OPTIONS "-Werror -cl-std=CL1.2"
 #define MAX_SOURCE_SIZE 1024*1024*4
-#define MAX_ARGS 16
 
 // check __err for ocl success and print message in case of error
 #define CL_ERRCHECK(__err) \
@@ -40,6 +41,8 @@ private:
 
     cl_mem buffer_[MAX_ARGS];
     cl_event buffer_events_[MAX_ARGS];
+    size_t buffer_count_ = 0;
+    size_t argument_count_ = 0;
 
     cl_uint ret_num_devices_;
     cl_uint ret_num_platforms_;
@@ -76,15 +79,17 @@ public:
     void Build();
 
     /**
-     * Binds basic parameter to the OpenCL Kernel. Use only for basic datatypes as int, float, ...
+     * Binds basic argument to the OpenCL Kernel. Use only for basic datatypes as int, float, ...
+     * ADD BUFFERS BEFORE ARGUMENTS
      * @param parameter cast to void*
      * @param arg_index index of the argument
      * @param size size of the data in byte
      */
-    void AddParameter(void *parameter, cl_uint arg_index, size_t size);
+    void AddArgument(void *parameter, cl_uint arg_index, size_t size);
 
     /**
      * Binds a Buffer to the OpenCL Kernel.
+     * ADD BUFFERS BEFORE ARGUMENTS
      * @param flags read/write access
      * @param arg_index index of the argument
      * @param buffer_size size of the array
