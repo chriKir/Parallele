@@ -7,7 +7,7 @@
 #include "ClLoader.h"
 #include "time_ms.h"
 
-//#define PRINT_MTX
+#define PRINT_MTX
 
 // compared to the OpenMP solution this is about 5-6x faster on NVIDIA GTX 1060   (2500ms / 410ms)
 // on a Intel Core i7-3517U this is 3-4x faster (4850ms / 1400ms)
@@ -30,9 +30,9 @@ int main() {
 
   try {
 
-    cl_int l = 1000;
-    cl_int m = 1000;
-    cl_int n = 1000;
+    cl_int l = 3;
+    cl_int m = 3;
+    cl_int n = 3;
 
     unsigned long start_time = time_ms();
 
@@ -77,7 +77,7 @@ int main() {
 
     loader->Run(NULL, global);
 
-    loader->GetResult(buffer_c, l * n * sizeof(cl_float), C);
+      loader->ReadBuffer(buffer_c, l * n * sizeof(cl_float), C);
 
 #ifdef PRINT_MTX
       std::cout << "\n=\n\n";

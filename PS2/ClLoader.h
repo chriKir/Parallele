@@ -10,7 +10,9 @@
 #include <malloc.h>
 
 #include <vector>
+
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+
 #include <CL/cl.h>
 
 #define BUILD_OPTIONS "-Werror -cl-std=CL1.2"
@@ -20,36 +22,36 @@
 // check __err for ocl success and print message in case of error
 #define CL_ERRCHECK(__err) \
 if(__err != CL_SUCCESS) { \
-	fprintf(stderr, "OpenCL Assertion failure in %s:%d:\n", __FILE__, __LINE__); \
-	fprintf(stderr, "Error code: %s\n",  ClLoader::get_error_string(__err)); \
-	throw ClException("ClException"); \
+    fprintf(stderr, "OpenCL Assertion failure in %s:%d:\n", __FILE__, __LINE__); \
+    fprintf(stderr, "Error code: %s\n",  ClLoader::get_error_string(__err)); \
+    throw ClException("ClException"); \
 }
 
 class ClLoader {
 private:
-		cl_device_id * devices_ = NULL;
+    cl_device_id *devices_ = NULL;
     cl_device_id device_id_ = NULL;
 
     cl_context context_ = NULL;
     cl_command_queue command_queue_ = NULL;
 
     cl_program program_ = NULL;
-    cl_platform_id * platforms_ = NULL;
+    cl_platform_id *platforms_ = NULL;
 
     cl_mem buffer_[MAX_ARGS];
-		cl_event buffer_events_[MAX_ARGS];
+    cl_event buffer_events_[MAX_ARGS];
 
     cl_uint ret_num_devices_;
     cl_uint ret_num_platforms_;
     cl_int ret_;
 
     std::string kernel_path_;
-    const char * kernel_source_string_;
+    const char *kernel_source_string_;
 
     size_t kernel_source_size_ = 0;
 
     cl_kernel kernel_ = NULL;
-		cl_event kernel_event_ = NULL;
+    cl_event kernel_event_ = NULL;
 
     void LoadKernelFile();
 
@@ -63,91 +65,93 @@ public:
      */
     ClLoader(const char *kernel_path, int device_nr);
 
-		/**
-		 * destructor frees memory
-		 */
+    /**
+     * destructor frees memory
+     */
     ~ClLoader();
 
-		/**
-		 * builds the kernel and prints compile errors
-		 */
+    /**
+     * builds the kernel and prints compile errors
+     */
     void Build();
 
-		/**
-		 * Binds basic parameter to the OpenCL Kernel. Use only for basic datatypes as int, float, ...
-		 * @param parameter cast to void*
-		 * @param arg_index index of the argument
-		 * @param size size of the data in byte
-		 */
+    /**
+     * Binds basic parameter to the OpenCL Kernel. Use only for basic datatypes as int, float, ...
+     * @param parameter cast to void*
+     * @param arg_index index of the argument
+     * @param size size of the data in byte
+     */
     void AddParameter(void *parameter, cl_uint arg_index, size_t size);
 
-		/**
-		 * Binds a Buffer to the OpenCL Kernel.
-		 * @param flags read/write access
-		 * @param arg_index index of the argument
-		 * @param buffer_size size of the array
-		 * @return returns the cl_mem reference
-		 */
+    /**
+     * Binds a Buffer to the OpenCL Kernel.
+     * @param flags read/write access
+     * @param arg_index index of the argument
+     * @param buffer_size size of the array
+     * @return returns the cl_mem reference
+     */
     cl_mem AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_size);
 
-		/**
-		 * Writes Data into a buffer
-		 * @param buffer cl_mem reference of the buffer
-		 * @param array array containing data
-		 * @param arg_index index of the argument
-		 * @param size size of the array
-		 */
-		void WriteBuffer(cl_mem buffer, cl_float *array, cl_uint arg_index, size_t size);
-		// TODO: should accept more than cl_float arrays
+    /**
+     * Writes Data into a buffer
+     * @param buffer cl_mem reference of the buffer
+     * @param array array containing data
+     * @param arg_index index of the argument
+     * @param size size of the array
+     */
+    void WriteBuffer(cl_mem buffer, cl_float *array, cl_uint arg_index, size_t size);
+    // TODO: should accept more than cl_float arrays
 
     /**
      * Runs the OpenCL Kernel.
      * @param local_work_size
      * @param global_work_size
      */
-    void Run(const size_t * local_work_size, const size_t * global_work_size);
+    void Run(const size_t *local_work_size, const size_t *global_work_size);
 
-		/**
-		 * Reads Data from Buffer
-		 * @param buffer
-		 * @param buffer_size
-		 * @param result
-		 */
-    void GetResult(cl_mem buffer, size_t buffer_size, cl_float * result);
+    /**
+     * Reads Data from Buffer
+     * @param buffer
+     * @param buffer_size
+     * @param result
+     */
+    void ReadBuffer(cl_mem buffer, size_t buffer_size, cl_float *result);
 
-		void PrintProfileInfo();
+    void PrintProfileInfo();
 
 
-		// Helper functions
+    // Helper functions
 
-		/**
-		 * returns the OpenCL error string
-		 * @param error nr
-		 * @return
-		 */
-		static const char * get_error_string(cl_int error);
+    /**
+     * returns the OpenCL error string
+     * @param error nr
+     * @return
+     */
+    static const char *get_error_string(cl_int error);
 
-		/**
-		 * Returns description Name, Vendor and Type of the OpenCL Device
-		 * @param device
-		 * @return
-		 */
-    const char* get_device_description(const cl_device_id device);
+    /**
+     * Returns description Name, Vendor and Type of the OpenCL Device
+     * @param device
+     * @return
+     */
+    const char *get_device_description(const cl_device_id device);
 
-		const char* device_type_string(cl_device_type type);
+    const char *device_type_string(cl_device_type type);
 
-		cl_device_type get_device_type(cl_device_id device);
+    cl_device_type get_device_type(cl_device_id device);
 
-		void print_profiling(cl_event event, const char * object_string);
+    void print_profiling(cl_event event, const char *object_string);
 
 };
 
-struct ClException : public std::exception
-{
-		std::string s;
-		ClException(std::string ss) : s(ss) {}
-		~ClException() throw () {}
-		const char* what() const throw() { return s.c_str(); }
+struct ClException : public std::exception {
+    std::string s;
+
+    ClException(std::string ss) : s(ss) {}
+
+    ~ClException() throw() {}
+
+    const char *what() const throw() { return s.c_str(); }
 };
 
 #endif //PARALLELE_CLLOADER_H

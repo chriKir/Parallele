@@ -52,7 +52,7 @@ public:
 
     void Run(const size_t * local_work_size, const size_t * global_work_size);
 
-    void GetResult(cl_mem buffer, size_t buffer_size, cl_float * result);
+    void ReadBuffer(cl_mem buffer, size_t buffer_size, cl_float *result);
 
     static void check_for_errors(cl_int error, int line, const char * file);
 

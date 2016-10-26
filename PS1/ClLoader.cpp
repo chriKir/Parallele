@@ -181,7 +181,7 @@ void ClLoader::Run(const size_t * local_work_size, const size_t * global_work_si
   ClLoader::check_for_errors(ret_, __LINE__, __FILE__);
 }
 
-void ClLoader::GetResult(cl_mem buffer, size_t buffer_size, cl_float * result) {
+void ClLoader::ReadBuffer(cl_mem buffer, size_t buffer_size, cl_float *result) {
 
   // Copy results from the memory buffer
   ret_ = clEnqueueReadBuffer(command_queue_,
