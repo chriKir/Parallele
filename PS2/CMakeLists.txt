@@ -13,8 +13,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 set(SOURCE_FILES
         main.cpp
-        ClLoader.cpp
-        ClLoader.h)
+        ../include/ClLoader.cpp
+        ../include/ClLoader.h)
 
 add_executable(PS2 ${SOURCE_FILES})
 

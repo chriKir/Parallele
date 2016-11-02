@@ -11,7 +11,6 @@
 
 #include <vector>
 
-#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #include <CL/cl.h>
 
 #define MAX_ARGS 8
@@ -41,7 +40,7 @@ private:
 
     cl_mem buffer_[MAX_ARGS];
     cl_event buffer_events_[MAX_ARGS];
-    size_t buffer_count_ = 0;
+    cl_uint buffer_count_ = 0;
     size_t argument_count_ = 0;
 
     cl_uint ret_num_devices_;

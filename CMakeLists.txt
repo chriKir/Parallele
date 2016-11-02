@@ -9,3 +9,4 @@ include_directories("${PROJECT_SOURCE_DIR}")
 
 add_subdirectory(PS1)
 add_subdirectory(PS2)
+add_subdirectory(PS3)

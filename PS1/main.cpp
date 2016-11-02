@@ -57,27 +57,27 @@ int main() {
       }
     }
 
-    ClLoader *loader = new ClLoader("../matrix.c");
+    ClLoader *loader = new ClLoader("../matrix.c", 0);
 
     loader->Build();
 
-    loader->AddParameter(&l, sizeof(cl_int));
-    loader->AddParameter(&m, sizeof(cl_int));
-    loader->AddParameter(&n, sizeof(cl_int));
+    loader->AddArgument(&l, 3, sizeof(cl_int));
+    loader->AddArgument(&m, 4, sizeof(cl_int));
+    loader->AddArgument(&n, 5, sizeof(cl_int));
 
-    cl_mem buffer_a = loader->AddBuffer(CL_MEM_READ_ONLY, l * m * sizeof(cl_float));
-    cl_mem buffer_b = loader->AddBuffer(CL_MEM_READ_ONLY, m * n * sizeof(cl_float));
-    cl_mem buffer_c = loader->AddBuffer(CL_MEM_WRITE_ONLY, l * n * sizeof(cl_float));
+    cl_mem buffer_a = loader->AddBuffer(CL_MEM_READ_ONLY, 0, l * m * sizeof(cl_float));
+    cl_mem buffer_b = loader->AddBuffer(CL_MEM_READ_ONLY, 1, m * n * sizeof(cl_float));
+    cl_mem buffer_c = loader->AddBuffer(CL_MEM_WRITE_ONLY, 2, l * n * sizeof(cl_float));
 
-    loader->WriteBuffer(buffer_a, A, l * m * sizeof(cl_float));
-    loader->WriteBuffer(buffer_b, B, m * n * sizeof(cl_float));
-    loader->WriteBuffer(buffer_c, C, l * n * sizeof(cl_float));
+    loader->WriteBuffer(buffer_a, A, 0, l * m * sizeof(cl_float));
+    loader->WriteBuffer(buffer_b, B, 1, m * n * sizeof(cl_float));
+    loader->WriteBuffer(buffer_c, C, 2, l * n * sizeof(cl_float));
 
     const size_t global[2] = {(size_t)l, (size_t)n};
 
     loader->Run(NULL, global);
 
-      loader->ReadBuffer(buffer_c, l * n * sizeof(cl_float), C);
+    loader->ReadBuffer(buffer_c, l * n * sizeof(cl_float), C);
 
 #ifdef PRINT_MTX
       std::cout << "\n=\n\n";

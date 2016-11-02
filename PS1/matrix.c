@@ -10,10 +10,11 @@ void printMatrix(size_t rows, size_t columns, __global float *matrix) {
   }
 }
 
-__kernel void matrix(const int l, const int m, const int n,
-                     const __global float *A,
+__kernel void matrix(const __global float *A,
                      const __global float *B,
-                     __global float *C) {
+                     __global float *C,
+                     const int l, const int m, const int n
+) {
 
   const int globalRow = get_global_id(0);
   const int globalCol = get_global_id(1);

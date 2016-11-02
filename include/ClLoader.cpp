@@ -115,7 +115,7 @@ void ClLoader::LoadKernelFile() {
     fp = fopen(kernel_path_.c_str(), "r");
 
     if (!fp) {
-        std::cerr << "Failed to load kernel." << std::endl;
+        throw ClException("Failed to load kernel");
     }
 
     kernel_source_string_ = (char *) malloc(MAX_SOURCE_SIZE);
@@ -127,7 +127,8 @@ void ClLoader::LoadKernelFile() {
 void ClLoader::Build() {
 
     // Create Command Queue
-    command_queue_ = clCreateCommandQueue(context_, device_id_, CL_QUEUE_PROFILING_ENABLE, &ret_);
+    cl_queue_properties queue_properties[] = { CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0};
+    command_queue_ = clCreateCommandQueueWithProperties(context_, device_id_, queue_properties, &ret_);
     CL_ERRCHECK(ret_);
 
     this->LoadKernelFile();
@@ -197,7 +198,7 @@ cl_mem ClLoader::AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_
                           &buffer_[arg_index]);
     CL_ERRCHECK(ret_);
 
-    buffer_count_ = std::max(buffer_count_, (size_t) arg_index);
+    buffer_count_ = std::max((cl_uint) buffer_count_, (cl_uint) arg_index);
     return buffer_[arg_index];
 }
 
@@ -254,7 +255,7 @@ void ClLoader::PrintProfileInfo() {
 
     print_profiling(kernel_event_, "kernel execution");
 
-    for (int j = 0; j <= buffer_count_; j++) {
+    for (cl_uint j = 0; j <= buffer_count_; j++) {
         print_profiling(buffer_events_[j], "write buffer");
     }
 
