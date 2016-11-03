@@ -6,6 +6,9 @@
 #include <cstring>
 #include "ClLoader.h"
 
+#define PROFILING
+#define DATA_ONLY
+
 ClLoader::ClLoader(const char *kernel_path, int device_nr) :
         kernel_path_(kernel_path) {
 
@@ -124,11 +127,15 @@ void ClLoader::LoadKernelFile() {
     fclose(fp);
 }
 
-void ClLoader::Build() {
+void ClLoader::Build(const char *kernelFunctionName) {
 
     // Create Command Queue
-    cl_queue_properties queue_properties[] = { CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0};
-    command_queue_ = clCreateCommandQueueWithProperties(context_, device_id_, queue_properties, &ret_);
+#ifdef PROFILING
+    command_queue_ = clCreateCommandQueue(context_, device_id_, CL_QUEUE_PROFILING_ENABLE, &ret_);
+#else
+    command_queue_ = clCreateCommandQueue(context_, device_id_, NULL, &ret_);
+#endif
+
     CL_ERRCHECK(ret_);
 
     this->LoadKernelFile();
@@ -171,7 +178,7 @@ void ClLoader::Build() {
     }
 
     // Create OpenCL Kernel
-    kernel_ = clCreateKernel(program_, "matrix", &ret_);
+    kernel_ = clCreateKernel(program_, kernelFunctionName, &ret_);
     CL_ERRCHECK(ret_);
 }
 
@@ -199,6 +206,10 @@ cl_mem ClLoader::AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_
     CL_ERRCHECK(ret_);
 
     buffer_count_ = std::max((cl_uint) buffer_count_, (cl_uint) arg_index);
+
+    buffer_read_times_[arg_index] = 0;
+    buffer_write_times_[arg_index] = 0;
+
     return buffer_[arg_index];
 }
 
@@ -212,58 +223,104 @@ void ClLoader::WriteBuffer(cl_mem buffer, cl_float *array, cl_uint arg_index, si
                                 array,
                                 0,
                                 NULL,
-                                &buffer_events_[arg_index]
+                                &buffer_write_events_[arg_index]
     );
 
     CL_ERRCHECK(ret_);
+
+#ifdef PROFILING
+    clWaitForEvents(1, &buffer_write_events_[arg_index]);
+    buffer_write_times_[arg_index] += getDuration(buffer_write_events_[arg_index]);
+#endif
+
 }
 
+// waits for kernel_event
+void ClLoader::ReWriteBuffer(cl_mem buffer, cl_float *array, cl_uint arg_index, size_t size) {
 
-void ClLoader::Run(const size_t *local_work_size, const size_t *global_work_size) {
+    ret_ = clEnqueueWriteBuffer(command_queue_,
+                                buffer,
+                                CL_TRUE,    // blocking write
+                                0,          // offset
+                                size,
+                                array,
+                                1,
+                                &kernel_event_,
+                                &buffer_write_events_[arg_index]
+    );
+
+    CL_ERRCHECK(ret_);
+
+#ifdef PROFILING
+    clWaitForEvents(1, &buffer_write_events_[arg_index]);
+    buffer_write_times_[arg_index] += getDuration(buffer_write_events_[arg_index]);
+#endif
+
+}
+
+void ClLoader::Run(const cl_uint work_dim, const size_t *local_work_size, const size_t *global_work_size) {
 
     ret_ = clEnqueueNDRangeKernel(command_queue_,
-                                  kernel_,
-                                  2,
+                                  kernel_,            // kernel
+                                  work_dim,                  // work_dim
                                   NULL,
                                   global_work_size,
                                   local_work_size,
                                   buffer_count_,
-                                  &buffer_events_[0],
+                                  &buffer_write_events_[0],
                                   &kernel_event_
     );
     CL_ERRCHECK(ret_);
 
+#ifdef PROFILING
+    clWaitForEvents(1, &kernel_event_);
+    kernel_execution_time_ += getDuration(kernel_event_);
+#endif
+
 }
 
-void ClLoader::ReadBuffer(cl_mem buffer, size_t buffer_size, cl_float *result) {
+void ClLoader::ReadBuffer(cl_mem buffer, cl_uint arg_index, size_t buffer_size, cl_float *result) {
 
     // Copy results from the memory buffer
     ret_ = clEnqueueReadBuffer(command_queue_,
                                buffer,
-                               CL_TRUE,
-                               0,
+                               CL_TRUE,            // blocking_read
+                               0,                  // offset
                                buffer_size,
                                result,
                                1,
                                &kernel_event_,
-                               &buffer_events_[4]);
+                               &buffer_read_events_[arg_index]);
     CL_ERRCHECK(ret_);
+
+#ifdef PROFILING
+    clWaitForEvents(1, &buffer_read_events_[arg_index]);
+    buffer_read_times_[arg_index] += getDuration(buffer_read_events_[arg_index]);
+#endif
 
 }
 
 void ClLoader::PrintProfileInfo() {
 
-    print_profiling(kernel_event_, "kernel execution");
+#ifdef DATA_ONLY
+    std::cout << kernel_execution_time_ << "; ";
 
     for (cl_uint j = 0; j <= buffer_count_; j++) {
-        print_profiling(buffer_events_[j], "write buffer");
+        std::cout << buffer_write_times_[j] << "; " << buffer_read_times_[j] << "; ";
     }
 
-    print_profiling(buffer_events_[4], "read buffer");
+#else
+    std::cout << "kernel execution time: " << kernel_execution_time_ << std::endl;
+
+    for (cl_uint j = 0; j <= buffer_count_; j++) {
+        std::cout << "buffer [" << j << "] write duration: " << buffer_write_times_[j] << std::endl;
+        std::cout << "buffer [" << j << "] read duration: " << buffer_read_times_[j] << std::endl;
+    }
+#endif
 
 }
 
-void ClLoader::print_profiling(cl_event event, const char *object_string) {
+double ClLoader::getDuration(cl_event event) {
 
     cl_ulong start_time = 0;
     cl_ulong end_time = 0;
@@ -273,7 +330,7 @@ void ClLoader::print_profiling(cl_event event, const char *object_string) {
 
     ret_ = clGetEventProfilingInfo(
             event,
-            CL_PROFILING_COMMAND_QUEUED,
+            CL_PROFILING_COMMAND_START,
             sizeof(cl_ulong),
             &start_time,
             NULL);
@@ -285,13 +342,8 @@ void ClLoader::print_profiling(cl_event event, const char *object_string) {
             &end_time,
             NULL);
 
-    double elapsed = (end_time - start_time) * 0.000001;
+    return (end_time - start_time) * 0.000001;
 
-#ifdef DATA_ONLY
-        std::cout << elapsed << ",";
-#else
-        std::cout << "Elapsed time to " << object_string << ": " << elapsed << "ms" << std::endl;
-#endif
 }
 
 const char *ClLoader::get_device_description(const cl_device_id device) {
@@ -413,7 +465,7 @@ const char *ClLoader::get_error_string(cl_int error) {
         case -51:
             return "CL_INVALID_ARG_SIZE";
         case -52:
-            return "CL_INVALID_KERNEL_ARGe";
+            return "CL_INVALID_KERNEL_ARGS";
         case -53:
             return "CL_INVALID_WORK_DIMENSION";
         case -54:

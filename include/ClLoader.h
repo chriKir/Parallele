@@ -11,12 +11,12 @@
 
 #include <vector>
 
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #include <CL/cl.h>
 
 #define MAX_ARGS 8
-#define DATA_ONLY
 
-#define BUILD_OPTIONS "-Werror -cl-std=CL1.2"
+#define BUILD_OPTIONS "-Werror -cl-std=CL1.2 -cl-nv-verbose"
 #define MAX_SOURCE_SIZE 1024*1024*4
 
 // check __err for ocl success and print message in case of error
@@ -39,13 +39,18 @@ private:
     cl_platform_id *platforms_ = NULL;
 
     cl_mem buffer_[MAX_ARGS];
-    cl_event buffer_events_[MAX_ARGS];
+    cl_event buffer_write_events_[MAX_ARGS];
+    cl_event buffer_read_events_[MAX_ARGS];
     cl_uint buffer_count_ = 0;
     size_t argument_count_ = 0;
 
     cl_uint ret_num_devices_;
     cl_uint ret_num_platforms_;
     cl_int ret_;
+
+    double kernel_execution_time_ = 0;
+    double buffer_write_times_[MAX_ARGS];
+    double buffer_read_times_[MAX_ARGS];
 
     std::string kernel_path_;
     const char *kernel_source_string_;
@@ -74,8 +79,9 @@ public:
 
     /**
      * builds the kernel and prints compile errors
+     * @param kernelFunctionName name of kernel function
      */
-    void Build();
+    void Build(const char *kernelFunctionName);
 
     /**
      * Binds basic argument to the OpenCL Kernel. Use only for basic datatypes as int, float, ...
@@ -104,14 +110,23 @@ public:
      * @param size size of the array
      */
     void WriteBuffer(cl_mem buffer, cl_float *array, cl_uint arg_index, size_t size);
-    // TODO: should accept more than cl_float arrays
+
+    /**
+     * Writes Data into a buffer. Waits for previous kernel execution to finish
+     * @param buffer
+     * @param array
+     * @param arg_index
+     * @param size
+     */
+    void ReWriteBuffer(cl_mem buffer, cl_float *array, cl_uint arg_index, size_t size);
 
     /**
      * Runs the OpenCL Kernel.
+     * @param work_dim
      * @param local_work_size
      * @param global_work_size
      */
-    void Run(const size_t *local_work_size, const size_t *global_work_size);
+    void Run(const cl_uint work_dim, const size_t *local_work_size, const size_t *global_work_size);
 
     /**
      * Reads Data from Buffer
@@ -119,7 +134,7 @@ public:
      * @param buffer_size
      * @param result
      */
-    void ReadBuffer(cl_mem buffer, size_t buffer_size, cl_float *result);
+    void ReadBuffer(cl_mem buffer, cl_uint arg_index, size_t buffer_size, cl_float *result);
 
     void PrintProfileInfo();
 
@@ -144,7 +159,12 @@ public:
 
     cl_device_type get_device_type(cl_device_id device);
 
-    void print_profiling(cl_event event, const char *object_string);
+    /**
+     * returns time between start & end of event in ms
+     * @param event
+     * @return
+     */
+    double getDuration(cl_event event);
 
 };
 

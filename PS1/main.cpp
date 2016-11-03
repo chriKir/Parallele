@@ -59,7 +59,7 @@ int main() {
 
     ClLoader *loader = new ClLoader("../matrix.c", 0);
 
-    loader->Build();
+    loader->Build("matrix");
 
     loader->AddArgument(&l, 3, sizeof(cl_int));
     loader->AddArgument(&m, 4, sizeof(cl_int));
@@ -75,9 +75,9 @@ int main() {
 
     const size_t global[2] = {(size_t)l, (size_t)n};
 
-    loader->Run(NULL, global);
+    loader->Run(2, NULL, global);
 
-    loader->ReadBuffer(buffer_c, l * n * sizeof(cl_float), C);
+    loader->ReadBuffer(buffer_c, 2, l * n * sizeof(cl_float), C);
 
 #ifdef PRINT_MTX
       std::cout << "\n=\n\n";
