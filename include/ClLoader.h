@@ -42,7 +42,6 @@ private:
     cl_event buffer_write_events_[MAX_ARGS];
     cl_event buffer_read_events_[MAX_ARGS];
     cl_uint buffer_count_ = 0;
-    size_t argument_count_ = 0;
 
     cl_uint ret_num_devices_;
     cl_uint ret_num_platforms_;

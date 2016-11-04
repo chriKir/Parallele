@@ -189,7 +189,6 @@ void ClLoader::AddArgument(void *parameter, cl_uint arg_index, size_t size) {
                           size,
                           parameter);
     CL_ERRCHECK(ret_);
-    argument_count_ = std::max(argument_count_, (size_t) arg_index);
 }
 
 cl_mem ClLoader::AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_size) {
@@ -205,7 +204,7 @@ cl_mem ClLoader::AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_
                           &buffer_[arg_index]);
     CL_ERRCHECK(ret_);
 
-    buffer_count_ = std::max((cl_uint) buffer_count_, (cl_uint) arg_index);
+    buffer_count_ = std::max((cl_uint) buffer_count_, (cl_uint) (arg_index + 1));
 
     buffer_read_times_[arg_index] = 0;
     buffer_write_times_[arg_index] = 0;
@@ -248,7 +247,6 @@ void ClLoader::ReWriteBuffer(cl_mem buffer, cl_float *array, cl_uint arg_index, 
                                 &kernel_event_,
                                 &buffer_write_events_[arg_index]
     );
-
     CL_ERRCHECK(ret_);
 
 #ifdef PROFILING
@@ -273,7 +271,8 @@ void ClLoader::Run(const cl_uint work_dim, const size_t *local_work_size, const 
     CL_ERRCHECK(ret_);
 
 #ifdef PROFILING
-    clWaitForEvents(1, &kernel_event_);
+    ret_ = clWaitForEvents(1, &kernel_event_);
+    CL_ERRCHECK(ret_);
     kernel_execution_time_ += getDuration(kernel_event_);
 #endif
 
@@ -296,6 +295,7 @@ void ClLoader::ReadBuffer(cl_mem buffer, cl_uint arg_index, size_t buffer_size, 
 #ifdef PROFILING
     clWaitForEvents(1, &buffer_read_events_[arg_index]);
     buffer_read_times_[arg_index] += getDuration(buffer_read_events_[arg_index]);
+    CL_ERRCHECK(ret_);
 #endif
 
 }
@@ -305,14 +305,14 @@ void ClLoader::PrintProfileInfo() {
 #ifdef DATA_ONLY
     std::cout << kernel_execution_time_ << "; ";
 
-    for (cl_uint j = 0; j <= buffer_count_; j++) {
+    for (cl_uint j = 0; j < buffer_count_; j++) {
         std::cout << buffer_write_times_[j] << "; " << buffer_read_times_[j] << "; ";
     }
 
 #else
     std::cout << "kernel execution time: " << kernel_execution_time_ << std::endl;
 
-    for (cl_uint j = 0; j <= buffer_count_; j++) {
+    for (cl_uint j = 0; j < buffer_count_; j++) {
         std::cout << "buffer [" << j << "] write duration: " << buffer_write_times_[j] << std::endl;
         std::cout << "buffer [" << j << "] read duration: " << buffer_read_times_[j] << std::endl;
     }
@@ -334,6 +334,7 @@ double ClLoader::getDuration(cl_event event) {
             sizeof(cl_ulong),
             &start_time,
             NULL);
+    CL_ERRCHECK(ret_);
 
     ret_ = clGetEventProfilingInfo(
             event,
@@ -341,6 +342,7 @@ double ClLoader::getDuration(cl_event event) {
             sizeof(cl_ulong),
             &end_time,
             NULL);
+    CL_ERRCHECK(ret_);
 
     return (end_time - start_time) * 0.000001;
 
