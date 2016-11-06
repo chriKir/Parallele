@@ -3,6 +3,7 @@
 //
 
 #include <iostream>
+#include <cmath>
 #include <malloc.h>
 
 // TODO: type..
@@ -12,8 +13,6 @@
 
 //#define PRINT_MTX
 
-
-#define ITERATIONS 1000
 
 void printMatrix(int rows, int columns, cl_float *matrix) {
 
@@ -29,31 +28,10 @@ void printMatrix(int rows, int columns, cl_float *matrix) {
     }
 }
 
-void init_diag_dom_near_identity_matrix(int Ndim, cl_float *A) {
-
-    int i, j;
-    cl_float sum;
-
-//
-// Create a random, diagonally dominant matrix.  For
-// a diagonally dominant matrix, the diagonal element
-// of each row is great than the sum of the other
-// elements in the row.  Then scale the matrix so the
-// result is near the identiy matrix.
-    for (i = 0; i < Ndim; i++) {
-        sum = (cl_float) 0.0;
-        for (j = 0; j < Ndim; j++) {
-            *(A + i * Ndim + j) = (std::rand() % 23) / (cl_float) 1000.0;
-            sum += *(A + i * Ndim + j);
-        }
-        *(A + i * Ndim + i) += sum;
-
-        // scale the row so the final matrix is almost an identity matrix;wq
-        for (j = 0; j < Ndim; j++)
-            *(A + i * Ndim + j) /= sum;
-    }
-
+float init_func(int x, int y) {
+    return 40 * std::sin((float)(16 * (2 * x - 1) * y));
 }
+
 
 int main() {
 
@@ -65,21 +43,25 @@ int main() {
 
         for (cl_uint matrix_size = 4; matrix_size < 4097; matrix_size *= 2) {
 
-            for (cl_uint iterations = 100; iterations < 100000; iterations *= 10) {
+            for (int iterations = 100; iterations < 100000; iterations *= 10) {
 
-                loader->AddArgument(&matrix_size, 3, sizeof(cl_uint));
-                loader->AddArgument(&iterations, 4, sizeof(cl_uint));
+                cl_float factor = (cl_float)std::pow(1/matrix_size, 2);
+
+                loader->AddArgument(&factor, 3, sizeof(cl_float));
+                loader->AddArgument(&matrix_size, 4, sizeof(cl_uint));
 
                 std::cout << std::endl << (int) matrix_size << "x" << (int) matrix_size << "/" << iterations << ": ";
 
-                cl_float *A = (cl_float *) std::malloc(matrix_size * matrix_size * sizeof(cl_float));
-                cl_float *b = (cl_float *) std::malloc(matrix_size * sizeof(cl_float));
-                cl_float *x = (cl_float *) std::malloc(matrix_size * sizeof(cl_float));
+                cl_float *f = (cl_float *) std::malloc(matrix_size * matrix_size * sizeof(cl_float));
+                cl_float *tmp = (cl_float *) std::malloc(matrix_size * matrix_size * sizeof(cl_float));
+                cl_float *u = (cl_float *) std::malloc(matrix_size  * matrix_size* sizeof(cl_float));
 
-                init_diag_dom_near_identity_matrix(matrix_size, A);
-                for (cl_uint i = 0; i < matrix_size; i++) { b[i] = (cl_float) ((std::rand() % 51) / 100.0); }
+                for (cl_uint i = 0; i < matrix_size; i++)
+                    for (cl_uint j = 0; j < matrix_size; j++)
+                        f[i + j * matrix_size] = init_func(i, j);
 
-                for (cl_uint i = 0; i < matrix_size; i++) { x[i] = (cl_float) 0; }
+
+                for (cl_uint i = 0; i < matrix_size * matrix_size; i++) { u[i] = (cl_float) 0; }
 
 #ifdef PRINT_MTX
                 printMatrix(matrix_size, matrix_size, A);
@@ -87,46 +69,41 @@ int main() {
                 printMatrix(matrix_size, 1, b);
 #endif
 
-                cl_mem buffer_A = loader->AddBuffer(CL_MEM_READ_ONLY, 0, matrix_size * matrix_size * sizeof(cl_float));
-                cl_mem buffer_b = loader->AddBuffer(CL_MEM_READ_ONLY, 1, matrix_size * sizeof(cl_float));
-                cl_mem buffer_x = loader->AddBuffer(CL_MEM_READ_ONLY, 2, matrix_size * sizeof(cl_float));
+                cl_mem buffer_f = loader->AddBuffer(CL_MEM_READ_ONLY, 0, matrix_size * matrix_size * sizeof(cl_float));
+                cl_mem buffer_tmp = loader->AddBuffer(CL_MEM_READ_WRITE, 1, matrix_size * matrix_size * sizeof(cl_float));
+                cl_mem buffer_u = loader->AddBuffer(CL_MEM_READ_ONLY, 2, matrix_size * matrix_size * sizeof(cl_float));
 
-                loader->WriteBuffer(buffer_A, A, 0, matrix_size * matrix_size * sizeof(cl_float));
-                loader->WriteBuffer(buffer_b, b, 1, matrix_size * sizeof(cl_float));
-                loader->WriteBuffer(buffer_x, x, 2, matrix_size * sizeof(cl_float));
+                loader->WriteBuffer(buffer_f, f, 0, matrix_size * matrix_size * sizeof(cl_float));
+                loader->WriteBuffer(buffer_tmp, tmp, 1, matrix_size * matrix_size * sizeof(cl_float));
+                loader->WriteBuffer(buffer_u, u, 2, matrix_size * matrix_size * sizeof(cl_float));
+
+                int iteration = 0;
 
                 const size_t global[2] = {(size_t) matrix_size, (size_t) matrix_size};
 
-//                do {
+                do {
 
-                    loader->Run(1, NULL, global);
+                    loader->Run(2, NULL, global);
 
-//                    loader->ReadBuffer(buffer_x1, 2, matrix_size * sizeof(cl_float), x1);
-//                    loader->ReadBuffer(buffer_x2, 3, matrix_size * sizeof(cl_float), x2);
+                    loader->ReadBuffer(buffer_tmp, 1, matrix_size * matrix_size * sizeof(cl_float), tmp);
 
 #ifdef PRINT_MTX
                     std::cout << "\n\nx=\n";
                     printMatrix(matrix_size, 1, x2);
 #endif
 
-//                    cl_mem buffer_temp = buffer_x2;
-//                    buffer_x2 = buffer_x1;
-//                    buffer_x1 = buffer_temp;
-//
-//                    loader->ReWriteBuffer(buffer_x1, x1, 2, matrix_size * sizeof(cl_float));
-//                    loader->ReWriteBuffer(buffer_x2, x2, 3, matrix_size * sizeof(cl_float));
-//
-//                    iteration++;
-//
-//                } while (iteration < iterations);
 
-                loader->ReadBuffer(buffer_x, 2, matrix_size * sizeof(cl_float), x);
+                    loader->ReWriteBuffer(buffer_u, tmp, 2, matrix_size * matrix_size* sizeof(cl_float));
+
+                    iteration++;
+
+                } while (iteration < iterations);
 
                 loader->PrintProfileInfo();
 
-                free(A);
-                free(b);
-                free(x);
+                free(f);
+                free(tmp);
+                free(u);
 
             }
         }
@@ -138,7 +115,7 @@ int main() {
     } catch (const std::exception &e) {
 
         std::cout << std::flush;
-        std::cerr << std::flush << "Exception thrown: " << e.what() << std::endl << std::endl;
+        std::cerr << std::flush << "Exception thrown: " << e.what();
 
         return -1;
     }

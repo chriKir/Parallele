@@ -118,7 +118,7 @@ void ClLoader::LoadKernelFile() {
     fp = fopen(kernel_path_.c_str(), "r");
 
     if (!fp) {
-        throw ClException("Failed to load kernel");
+        throw ClException(strerror(errno));
     }
 
     kernel_source_string_ = (char *) malloc(MAX_SOURCE_SIZE);

@@ -17,36 +17,34 @@ void printMatrix(size_t rows, size_t columns, __global float *matrix) {
  * solves Ax = b approximately
  * @param A Matrix A
  * @param b Column b
- * @param goal column for x
+ * @param x1 start column for x
+ * @param x2 goal column for x
  * @param matrix_size size of A
  */
-__kernel void jacobi(const __global float *A,
-                     const __global float *b,
-                     __global float *x,
-                     const unsigned int matrix_size,
-                     const unsigned int iterations
+__kernel void jacobi(const __global float *f,
+                     __global float *temp,
+                     __global float *u,
+                     const float factor,
+                     const unsigned int matrix_size
 ) {
     int i = get_global_id(0);
+    int j = get_global_id(1);
 
-    int iteration = 0;
 
-    do {
-
-        float x_new = 0.0;
-        for (int j = 0; j < matrix_size; j++) {
-            if (i != j)
-                x_new += A[i * matrix_size + j] * x[j];
-        }
-        x_new = (b[i] - x_new) / A[i * matrix_size + i];
-
-        x[i] = x_new;
-
-        iteration++;
-
-    } while (iteration < iterations);
+    if (i == 0 || j == 0 || i == matrix_size - 1 || j == matrix_size - 1) {
+        temp[i * matrix_size + j] = u[i * matrix_size + j];
+    } else {
+        temp[i * matrix_size + j] = (float) 1 / 4 *
+                             ( u[matrix_size * (i - 1) + j]
+                             + u[matrix_size * i + j + 1]
+                             + u[matrix_size * i + j - 1]
+                             + u[matrix_size * (i + 1) + j]
+                             - factor * f[i * matrix_size + j]);
+    }
+//    u[i * N + j] = temp[i * N + j];
 
 #ifdef DEBUG
-    printMatrix(matrix_size, 1, x);
+    printMatrix(matrix_size, 1, x2);
 #endif
 }
 

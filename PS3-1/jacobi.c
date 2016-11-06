@@ -21,20 +21,27 @@ void printMatrix(size_t rows, size_t columns, __global float *matrix) {
  * @param x2 goal column for x
  * @param matrix_size size of A
  */
-__kernel void jacobi(const __global float *A,
-                     const __global float *b,
-                     __global float *x1,
-                     __global float *x2,
+__kernel void jacobi(const __global float *f,
+                     __global float *temp,
+                     __global float *u,
+                     const float factor,
                      const unsigned int matrix_size
 ) {
     int i = get_global_id(0);
+    int j = get_global_id(1);
 
-    x2[i] = 0.0;
-    for (int j = 0; j < matrix_size; j++) {
-        if (i != j)
-            x2[i] += A[i * matrix_size + j] * x1[j];
+
+    if (i == 0 || j == 0 || i == matrix_size - 1 || j == matrix_size - 1) {
+        temp[i * matrix_size + j] = u[i * matrix_size + j];
+    } else {
+        temp[i * matrix_size + j] = (float) 1 / 4 *
+                             ( u[matrix_size * (i - 1) + j]
+                             + u[matrix_size * i + j + 1]
+                             + u[matrix_size * i + j - 1]
+                             + u[matrix_size * (i + 1) + j]
+                             - factor * f[i * matrix_size + j]);
     }
-    x2[i] = (b[i] - x2[i]) / A[i * matrix_size + i];
+//    u[i * N + j] = temp[i * N + j];
 
 #ifdef DEBUG
     printMatrix(matrix_size, 1, x2);
