@@ -16,7 +16,7 @@
 
 #define MAX_ARGS 8
 
-#define BUILD_OPTIONS "-Werror -cl-std=CL1.2 -cl-nv-verbose"
+#define BUILD_OPTIONS "-Werror -cl-std=CL1.2" // -cl-nv-verbose"
 #define MAX_SOURCE_SIZE 1024*1024*4
 
 // check __err for ocl success and print message in case of error

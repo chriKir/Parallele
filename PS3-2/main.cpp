@@ -41,7 +41,7 @@ int main() {
 
         loader->Build("jacobi");
 
-        for (cl_uint matrix_size = 4; matrix_size < 4097; matrix_size *= 2) {
+        for (cl_uint matrix_size = 4; matrix_size < 1025; matrix_size *= 2) {
 
             for (int iterations = 100; iterations < 100000; iterations *= 10) {
 
