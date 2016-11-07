@@ -1,4 +1,4 @@
-# Matrix Mutiplication
+# Parallele
 Roland Gritzer
 
 Compile:
