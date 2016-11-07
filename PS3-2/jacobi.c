@@ -22,29 +22,33 @@ void printMatrix(size_t rows, size_t columns, __global float *matrix) {
  * @param matrix_size size of A
  */
 __kernel void jacobi(const __global float *f,
-                     __global float *temp,
                      __global float *u,
                      const float factor,
-                     const unsigned int matrix_size
+                     const unsigned int matrix_size,
+                     const unsigned int iterations
 ) {
     int i = get_global_id(0);
     int j = get_global_id(1);
 
+    int iteration = 0;
 
-    if (i == 0 || j == 0 || i == matrix_size - 1 || j == matrix_size - 1) {
-        temp[i * matrix_size + j] = u[i * matrix_size + j];
-    } else {
-        temp[i * matrix_size + j] = (float) 1 / 4 *
-                             ( u[matrix_size * (i - 1) + j]
-                             + u[matrix_size * i + j + 1]
-                             + u[matrix_size * i + j - 1]
-                             + u[matrix_size * (i + 1) + j]
-                             - factor * f[i * matrix_size + j]);
-    }
-//    u[i * N + j] = temp[i * N + j];
+    do {
 
-#ifdef DEBUG
-    printMatrix(matrix_size, 1, x2);
-#endif
+        if (i == 0 || j == 0 || i == matrix_size - 1 || j == matrix_size - 1) {
+            //
+        } else {
+            u[i * matrix_size + j] = (float) 1 / 4 *
+                                        (u[matrix_size * (i - 1) + j]
+                                         + u[matrix_size * i + j + 1]
+                                         + u[matrix_size * i + j - 1]
+                                         + u[matrix_size * (i + 1) + j]
+                                         - factor * f[i * matrix_size + j]);
+        }
+        barrier(CLK_GLOBAL_MEM_FENCE);
+
+        iteration++;
+
+    } while (iteration < iterations);
+
 }
 

@@ -29,7 +29,7 @@ void printMatrix(int rows, int columns, cl_float *matrix) {
 }
 
 float init_func(int x, int y) {
-    return 40 * std::sin((float)(16 * (2 * x - 1) * y));
+    return 40 * std::sin((float) (16 * (2 * x - 1) * y));
 }
 
 
@@ -45,16 +45,16 @@ int main() {
 
             for (int iterations = 100; iterations < 100000; iterations *= 10) {
 
-                cl_float factor = (cl_float)std::pow(1/matrix_size, 2);
+                cl_float factor = (cl_float) std::pow(1 / matrix_size, 2);
 
-                loader->AddArgument(&factor, 3, sizeof(cl_float));
-                loader->AddArgument(&matrix_size, 4, sizeof(cl_uint));
+                loader->AddArgument(&factor, 2, sizeof(cl_float));
+                loader->AddArgument(&matrix_size, 3, sizeof(cl_uint));
+                loader->AddArgument(&iterations, 4, sizeof(cl_uint));
 
                 std::cout << std::endl << (int) matrix_size << "x" << (int) matrix_size << "/" << iterations << ": ";
 
                 cl_float *f = (cl_float *) std::malloc(matrix_size * matrix_size * sizeof(cl_float));
-                cl_float *tmp = (cl_float *) std::malloc(matrix_size * matrix_size * sizeof(cl_float));
-                cl_float *u = (cl_float *) std::malloc(matrix_size  * matrix_size* sizeof(cl_float));
+                cl_float *u = (cl_float *) std::malloc(matrix_size * matrix_size * sizeof(cl_float));
 
                 for (cl_uint i = 0; i < matrix_size; i++)
                     for (cl_uint j = 0; j < matrix_size; j++)
@@ -70,39 +70,26 @@ int main() {
 #endif
 
                 cl_mem buffer_f = loader->AddBuffer(CL_MEM_READ_ONLY, 0, matrix_size * matrix_size * sizeof(cl_float));
-                cl_mem buffer_tmp = loader->AddBuffer(CL_MEM_READ_WRITE, 1, matrix_size * matrix_size * sizeof(cl_float));
-                cl_mem buffer_u = loader->AddBuffer(CL_MEM_READ_ONLY, 2, matrix_size * matrix_size * sizeof(cl_float));
+                cl_mem buffer_u = loader->AddBuffer(CL_MEM_READ_ONLY, 1, matrix_size * matrix_size * sizeof(cl_float));
 
                 loader->WriteBuffer(buffer_f, f, 0, matrix_size * matrix_size * sizeof(cl_float));
-                loader->WriteBuffer(buffer_tmp, tmp, 1, matrix_size * matrix_size * sizeof(cl_float));
-                loader->WriteBuffer(buffer_u, u, 2, matrix_size * matrix_size * sizeof(cl_float));
-
-                int iteration = 0;
+                loader->WriteBuffer(buffer_u, u, 1, matrix_size * matrix_size * sizeof(cl_float));
 
                 const size_t global[2] = {(size_t) matrix_size, (size_t) matrix_size};
 
-                do {
+                loader->Run(2, NULL, global);
 
-                    loader->Run(2, NULL, global);
-
-                    loader->ReadBuffer(buffer_tmp, 1, matrix_size * matrix_size * sizeof(cl_float), tmp);
+                loader->ReadBuffer(buffer_u, 1, matrix_size * matrix_size * sizeof(cl_float), u);
 
 #ifdef PRINT_MTX
-                    std::cout << "\n\nx=\n";
-                    printMatrix(matrix_size, 1, x2);
+                std::cout << "\n\nx=\n";
+                printMatrix(matrix_size, 1, u);
 #endif
 
-
-                    loader->ReWriteBuffer(buffer_u, tmp, 2, matrix_size * matrix_size* sizeof(cl_float));
-
-                    iteration++;
-
-                } while (iteration < iterations);
 
                 loader->PrintProfileInfo();
 
                 free(f);
-                free(tmp);
                 free(u);
 
             }
