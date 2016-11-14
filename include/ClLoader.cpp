@@ -182,7 +182,7 @@ void ClLoader::Build(const char *kernelFunctionName) {
     CL_ERRCHECK(ret_);
 }
 
-void ClLoader::AddArgument(void *parameter, cl_uint arg_index, size_t size) {
+void ClLoader::setKernelArg(void *parameter, cl_uint arg_index, size_t size) {
 
     ret_ = clSetKernelArg(kernel_,
                           arg_index,

@@ -89,7 +89,7 @@ public:
      * @param arg_index index of the argument
      * @param size size of the data in byte
      */
-    void AddArgument(void *parameter, cl_uint arg_index, size_t size);
+    void setKernelArg(void *parameter, cl_uint arg_index, size_t size);
 
     /**
      * Binds a Buffer to the OpenCL Kernel.

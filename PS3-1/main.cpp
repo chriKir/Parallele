@@ -47,8 +47,8 @@ int main() {
 
                 cl_float factor = (cl_float)std::pow(1/matrix_size, 2);
 
-                loader->AddArgument(&factor, 3, sizeof(cl_float));
-                loader->AddArgument(&matrix_size, 4, sizeof(cl_uint));
+                loader->setKernelArg(&factor, 3, sizeof(cl_float));
+                loader->setKernelArg(&matrix_size, 4, sizeof(cl_uint));
 
                 std::cout << std::endl << (int) matrix_size << "x" << (int) matrix_size << "/" << iterations << ": ";
 

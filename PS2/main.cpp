@@ -43,9 +43,9 @@ int main() {
             m = matrix_size;
             n = matrix_size;
 
-            loader->AddArgument(&l, 3, sizeof(cl_int));
-            loader->AddArgument(&m, 4, sizeof(cl_int));
-            loader->AddArgument(&n, 5, sizeof(cl_int));
+            loader->setKernelArg(&l, 3, sizeof(cl_int));
+            loader->setKernelArg(&m, 4, sizeof(cl_int));
+            loader->setKernelArg(&n, 5, sizeof(cl_int));
 
             std::cout << std::endl << (int) matrix_size << "x" << (int) matrix_size << ": ";
 

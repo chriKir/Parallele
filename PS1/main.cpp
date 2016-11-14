@@ -61,9 +61,9 @@ int main() {
 
     loader->Build("matrix");
 
-    loader->AddArgument(&l, 3, sizeof(cl_int));
-    loader->AddArgument(&m, 4, sizeof(cl_int));
-    loader->AddArgument(&n, 5, sizeof(cl_int));
+      loader->setKernelArg(&l, 3, sizeof(cl_int));
+      loader->setKernelArg(&m, 4, sizeof(cl_int));
+      loader->setKernelArg(&n, 5, sizeof(cl_int));
 
     cl_mem buffer_a = loader->AddBuffer(CL_MEM_READ_ONLY, 0, l * m * sizeof(cl_float));
     cl_mem buffer_b = loader->AddBuffer(CL_MEM_READ_ONLY, 1, m * n * sizeof(cl_float));
