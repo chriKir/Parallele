@@ -12,7 +12,7 @@
 #include <vector>
 
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
-#include <CL/cl.h>
+#include <CL/cl.hpp>
 
 #define MAX_ARGS 8
 
@@ -32,7 +32,7 @@ private:
     cl_device_id *devices_ = NULL;
     cl_device_id device_id_ = NULL;
 
-    cl_context context_ = NULL;
+    cl::Context context_ = NULL;
     cl_command_queue command_queue_ = NULL;
 
     cl_program program_ = NULL;
