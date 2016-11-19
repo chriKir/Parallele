@@ -87,9 +87,9 @@ int main() {
                 printMatrix(matrix_size, 1, b);
 #endif
 
-                cl_mem buffer_A = loader->AddBuffer(CL_MEM_READ_ONLY, 0, matrix_size * matrix_size * sizeof(cl_float));
-                cl_mem buffer_b = loader->AddBuffer(CL_MEM_READ_ONLY, 1, matrix_size * sizeof(cl_float));
-                cl_mem buffer_x = loader->AddBuffer(CL_MEM_READ_ONLY, 2, matrix_size * sizeof(cl_float));
+                cl::Buffer buffer_A = loader->AddBuffer(CL_MEM_READ_ONLY, 0, matrix_size * matrix_size * sizeof(cl_float));
+                cl::Buffer buffer_b = loader->AddBuffer(CL_MEM_READ_ONLY, 1, matrix_size * sizeof(cl_float));
+                cl::Buffer buffer_x = loader->AddBuffer(CL_MEM_READ_ONLY, 2, matrix_size * sizeof(cl_float));
 
                 loader->WriteBuffer(buffer_A, A, 0, matrix_size * matrix_size * sizeof(cl_float));
                 loader->WriteBuffer(buffer_b, b, 1, matrix_size * sizeof(cl_float));
@@ -109,7 +109,7 @@ int main() {
                     printMatrix(matrix_size, 1, x2);
 #endif
 
-//                    cl_mem buffer_temp = buffer_x2;
+//                    cl::Buffer buffer_temp = buffer_x2;
 //                    buffer_x2 = buffer_x1;
 //                    buffer_x1 = buffer_temp;
 //

@@ -11,15 +11,12 @@
 
 #include <vector>
 
-#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
+#include <map>
 
-#define MAX_ARGS 8
+#define BUILD_OPTIONS "-cl-std=CL1.2" // -cl-nv-verbose -Werror "
 
-#define BUILD_OPTIONS "-Werror -cl-std=CL1.2" // -cl-nv-verbose"
-#define MAX_SOURCE_SIZE 1024*1024*4
-
-// check __err for ocl success and print message in case of error
 #define CL_ERRCHECK(__err) \
 if(__err != CL_SUCCESS) { \
     fprintf(stderr, "OpenCL Assertion failure in %s:%d:\n", __FILE__, __LINE__); \
@@ -29,35 +26,30 @@ if(__err != CL_SUCCESS) { \
 
 class ClLoader {
 private:
-    cl_device_id *devices_ = NULL;
-    cl_device_id device_id_ = NULL;
+    std::vector<cl::Platform> platforms_;
+    std::vector<cl::Device> devices_;
+    std::vector<cl::Device> all_devices_;
 
-    cl::Context context_ = NULL;
-    cl_command_queue command_queue_ = NULL;
+    cl::Device device_;
 
-    cl_program program_ = NULL;
-    cl_platform_id *platforms_ = NULL;
+    cl::Context context_;
+    cl::CommandQueue command_queue_;
 
-    cl_mem buffer_[MAX_ARGS];
-    cl_event buffer_write_events_[MAX_ARGS];
-    cl_event buffer_read_events_[MAX_ARGS];
-    cl_uint buffer_count_ = 0;
+    cl::Program program_;
 
-    cl_uint ret_num_devices_;
-    cl_uint ret_num_platforms_;
-    cl_int ret_;
+    std::map<int, cl::Event> buffer_write_events_;
+    std::map<int, cl::Event> buffer_read_events_;
 
     double kernel_execution_time_ = 0;
-    double buffer_write_times_[MAX_ARGS];
-    double buffer_read_times_[MAX_ARGS];
+    std::map<int, double> buffer_write_times_;
+    std::map<int, double> buffer_read_times_;
 
     std::string kernel_path_;
-    const char *kernel_source_string_;
+    std::string kernel_source_string_;
+    cl::Program::Sources sources_;
 
-    size_t kernel_source_size_ = 0;
-
-    cl_kernel kernel_ = NULL;
-    cl_event kernel_event_ = NULL;
+    cl::Kernel kernel_;
+    std::vector<cl::Event> kernel_event_;
 
     void LoadKernelFile();
 
@@ -66,15 +58,10 @@ public:
     /**
      * init OpenCL Device. If device_nr = -1 asks which device
      * @param kernel_path path to kernel file
-     * @param device_nr available devices are nubered starting from 0. -1 means ask for device
+     * @param platform_nr available devices are nubered starting from 0. -1 means ask for device
      * @throws ClException if device_nr is not available
      */
-    ClLoader(const char *kernel_path, int device_nr);
-
-    /**
-     * destructor frees memory
-     */
-    ~ClLoader();
+    ClLoader(const char *kernel_path, int platform_nr);
 
     /**
      * builds the kernel and prints compile errors
@@ -93,22 +80,21 @@ public:
 
     /**
      * Binds a Buffer to the OpenCL Kernel.
-     * ADD BUFFERS BEFORE ARGUMENTS
      * @param flags read/write access
      * @param arg_index index of the argument
      * @param buffer_size size of the array
-     * @return returns the cl_mem reference
+     * @return returns the cl::Buffer reference
      */
-    cl_mem AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_size);
+    cl::Buffer AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_size);
 
     /**
      * Writes Data into a buffer
-     * @param buffer cl_mem reference of the buffer
+     * @param buffer cl::Buffer reference of the buffer
      * @param array array containing data
      * @param arg_index index of the argument
      * @param size size of the array
      */
-    void WriteBuffer(cl_mem buffer, cl_float *array, cl_uint arg_index, size_t size);
+    void WriteBuffer(cl::Buffer buffer, cl_float *array, cl_uint arg_index, size_t size);
 
     /**
      * Writes Data into a buffer. Waits for previous kernel execution to finish
@@ -117,7 +103,7 @@ public:
      * @param arg_index
      * @param size
      */
-    void ReWriteBuffer(cl_mem buffer, cl_float *array, cl_uint arg_index, size_t size);
+    void ReWriteBuffer(cl::Buffer buffer, cl_float *array, cl_uint arg_index, size_t size);
 
     /**
      * Runs the OpenCL Kernel.
@@ -125,7 +111,7 @@ public:
      * @param local_work_size
      * @param global_work_size
      */
-    void Run(const cl_uint work_dim, const size_t *local_work_size, const size_t *global_work_size);
+    void Run(const cl::NDRange local_work_size, const cl::NDRange global_work_size);
 
     /**
      * Reads Data from Buffer
@@ -133,7 +119,7 @@ public:
      * @param buffer_size
      * @param result
      */
-    void ReadBuffer(cl_mem buffer, cl_uint arg_index, size_t buffer_size, cl_float *result);
+    void ReadBuffer(cl::Buffer buffer, cl_uint arg_index, size_t buffer_size, cl_float *result);
 
     void PrintProfileInfo();
 
@@ -152,18 +138,18 @@ public:
      * @param device
      * @return
      */
-    const char *get_device_description(const cl_device_id device);
+    std::string get_device_description(const cl::Device device);
+
+    std::vector<cl::Event> getEvents(std::map<int, cl::Event> myMap);
 
     const char *device_type_string(cl_device_type type);
-
-    cl_device_type get_device_type(cl_device_id device);
 
     /**
      * returns time between start & end of event in ms
      * @param event
      * @return
      */
-    double getDuration(cl_event event);
+    double getDuration(cl::Event event);
 
 };
 

@@ -15,12 +15,12 @@
 #define MAX_SOURCE_SIZE (0x100000)
 
 int main() {
-  cl_device_id device_id = NULL;
-  cl_context context = NULL;
-  cl_command_queue command_queue = NULL;
-  cl_mem memobj = NULL;
-  cl_program program = NULL;
-  cl_kernel kernel = NULL;
+  cl::Devicedevice_id = NULL;
+  cl::Context context = NULL;
+  cl::CommandQueue command_queue = NULL;
+  cl::Buffer memobj = NULL;
+  cl::Program program = NULL;
+  cl::Kernel kernel = NULL;
   cl_platform_id platform_id = NULL;
   cl_uint ret_num_devices;
   cl_uint ret_num_platforms;
@@ -68,7 +68,7 @@ int main() {
   kernel = clCreateKernel(program, "hello", &ret);
 
 /* Set OpenCL Kernel Parameters */
-  ret = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *) &memobj);
+  ret = clSetKernelArg(kernel, 0, sizeof(cl::Buffer), (void *) &memobj);
 
 /* Execute OpenCL Kernel */
   ret = clEnqueueTask(command_queue, kernel, 0, NULL, NULL);

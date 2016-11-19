@@ -11,8 +11,6 @@ set( CMAKE_VERBOSE_MAKEFILE on )
 find_package(OpenCL REQUIRED)
 include_directories(${OpenCL_INCLUDE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-
 set(SOURCE_FILES
         main.cpp
         ../include/ClLoader.cpp

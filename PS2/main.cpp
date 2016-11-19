@@ -28,7 +28,7 @@ int main() {
 
     try {
 
-        ClLoader *loader = new ClLoader("../matrix.c", 0);
+        ClLoader *loader = new ClLoader("../matrix.c", -1);
 
         loader->Build("matrix");
 
@@ -70,17 +70,17 @@ int main() {
             printMatrix(m, n, B);
 #endif
 
-            cl_mem buffer_a = loader->AddBuffer(CL_MEM_READ_ONLY, 0, l * m * sizeof(cl_float));
-            cl_mem buffer_b = loader->AddBuffer(CL_MEM_READ_ONLY, 1, m * n * sizeof(cl_float));
-            cl_mem buffer_c = loader->AddBuffer(CL_MEM_READ_WRITE, 2, l * n * sizeof(cl_float));
+            cl::Buffer buffer_a = loader->AddBuffer(CL_MEM_READ_ONLY, 0, l * m * sizeof(cl_float));
+            cl::Buffer buffer_b = loader->AddBuffer(CL_MEM_READ_ONLY, 1, m * n * sizeof(cl_float));
+            cl::Buffer buffer_c = loader->AddBuffer(CL_MEM_READ_WRITE, 2, l * n * sizeof(cl_float));
 
             loader->WriteBuffer(buffer_a, A, 0, l * m * sizeof(cl_float));
             loader->WriteBuffer(buffer_b, B, 1, m * n * sizeof(cl_float));
             loader->WriteBuffer(buffer_c, C, 2, l * n * sizeof(cl_float));
 
-            const size_t global[2] = {(size_t) l, (size_t) n};
+            cl::NDRange global((size_t) l, (size_t) n);
 
-            loader->Run(2, NULL, global);
+            loader->Run(cl::NullRange, global);
 
             loader->ReadBuffer(buffer_c, 2, l * n * sizeof(cl_float), C);
 

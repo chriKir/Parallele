@@ -37,7 +37,7 @@ int main() {
 
     try {
 
-        ClLoader *loader = new ClLoader("../jacobi.c", 0);
+        ClLoader *loader = new ClLoader("../jacobi.c", -1);
 
         loader->Build("jacobi");
 
@@ -69,21 +69,17 @@ int main() {
                 printMatrix(matrix_size, 1, b);
 #endif
 
-                cl_mem buffer_f = loader->AddBuffer(CL_MEM_READ_ONLY, 0, matrix_size * matrix_size * sizeof(cl_float));
-                cl_mem buffer_tmp = loader->AddBuffer(CL_MEM_READ_WRITE, 1, matrix_size * matrix_size * sizeof(cl_float));
-                cl_mem buffer_u = loader->AddBuffer(CL_MEM_READ_ONLY, 2, matrix_size * matrix_size * sizeof(cl_float));
-
-                loader->WriteBuffer(buffer_f, f, 0, matrix_size * matrix_size * sizeof(cl_float));
-                loader->WriteBuffer(buffer_tmp, tmp, 1, matrix_size * matrix_size * sizeof(cl_float));
-                loader->WriteBuffer(buffer_u, u, 2, matrix_size * matrix_size * sizeof(cl_float));
+                cl::Buffer buffer_f = loader->AddBuffer(CL_MEM_READ_ONLY, 0, matrix_size * matrix_size * sizeof(cl_float));
+                cl::Buffer buffer_tmp = loader->AddBuffer(CL_MEM_READ_WRITE, 1, matrix_size * matrix_size * sizeof(cl_float));
+                cl::Buffer buffer_u = loader->AddBuffer(CL_MEM_READ_ONLY, 2, matrix_size * matrix_size * sizeof(cl_float));
 
                 int iteration = 0;
 
-                const size_t global[2] = {(size_t) matrix_size, (size_t) matrix_size};
+                cl::NDRange global(matrix_size, matrix_size);
 
                 do {
 
-                    loader->Run(2, NULL, global);
+                    loader->Run(cl::NullRange, global);
 
                     loader->ReadBuffer(buffer_tmp, 1, matrix_size * matrix_size * sizeof(cl_float), tmp);
 
