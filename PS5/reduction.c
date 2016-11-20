@@ -1,9 +1,19 @@
 #define VALUE int
 
-/**
- *
- */
-__kernel void reduction(
+__kernel void reduction_v1(
+        __const __global VALUE *buffer,
+        __global VALUE *result
+) {
+
+    int sum = 0;
+    for (int i = 0; i < get_global_size(0); i++) {
+        sum += buffer[i];
+    }
+
+    result[0] = sum;
+}
+
+__kernel void reduction_v2(
         __const __global VALUE *buffer,
         __global VALUE *result,
         __local VALUE *scratch
@@ -14,6 +24,9 @@ __kernel void reduction(
 
     int global_size = get_global_size(0);
     int local_size = get_local_size(0);
+    int group_id = get_group_id(0);
+
+//    printf("%d/%d:%d/%d_%d\n", local_index, local_size, global_index, global_size, group_id);
 //    printf("%d\n", buffer[55]);
 //    printf("%d\n", local_size);
 
@@ -25,10 +38,9 @@ __kernel void reduction(
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-//    printf("%d:%d\n", global_index, local_index);
-    for (int offset = 1; offset < local_size; offset <<= 1) {
-        int mask = (offset << 1) - 1;
-        if ((local_index & mask) == 0) {
+    for (int offset = local_size / 2; offset > 0; offset >>= 1) {
+
+        if (local_index < offset) {
             VALUE other = scratch[local_index + offset];
             VALUE mine = scratch[local_index];
             scratch[local_index] = mine + other;
@@ -36,7 +48,7 @@ __kernel void reduction(
         barrier(CLK_LOCAL_MEM_FENCE);
     }
     if (local_index == 0) {
-        result[get_group_id(0)] = scratch[0];
+        result[group_id] = scratch[0];
     }
 
 }

@@ -69,7 +69,7 @@ public:
      * builds the kernel and prints compile errors
      * @param kernelFunctionName name of kernel function
      */
-    void Build(const char *kernelFunctionName);
+    void Build(std::string kernelFunctionName);
 
     /**
      * Binds basic argument to the OpenCL Kernel. Use only for basic datatypes as int, float, ...

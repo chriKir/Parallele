@@ -70,7 +70,7 @@ ClWrapper::ClWrapper(const char *kernel_path, int platform_nr) :
         throw ClException("No devices found. Check OpenCL installation!");
     }
 
-    std::cout << "using: " << get_device_description(device) << std::endl;
+    std::cout << "using: " << get_device_description(device) << std::endl << std::endl;
 
     context_ = cl::Context(device);
 
@@ -87,7 +87,7 @@ void ClWrapper::LoadKernelFile() {
                                     std::make_pair(kernel_source_string_.c_str(), kernel_source_string_.length() + 1));
 }
 
-void ClWrapper::Build(const char *kernelFunctionName) {
+void ClWrapper::Build(std::string kernelFunctionName) {
 
     // Create Command Queue
 #ifdef PROFILING
@@ -126,7 +126,7 @@ void ClWrapper::Build(const char *kernelFunctionName) {
     }
 
     // Create OpenCL Kernel
-    kernel = cl::Kernel(program_, kernelFunctionName);
+    kernel = cl::Kernel(program_, kernelFunctionName.c_str());
 }
 
 void ClWrapper::setKernelArg(void *parameter, cl_uint arg_index, size_t size) {
