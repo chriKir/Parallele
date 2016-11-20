@@ -5,13 +5,12 @@
 #include <sstream>
 #include <cstring>
 #include <fstream>
-#include "ClLoader.h"
+#include "ClWrapper.h"
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "TemplateArgumentsIssues"
-#define PROFILING
 
-ClLoader::ClLoader(const char *kernel_path, int platform_nr) :
+ClWrapper::ClWrapper(const char *kernel_path, int platform_nr) :
         kernel_path_(kernel_path) {
 
     //get all platforms (drivers)
@@ -53,12 +52,12 @@ ClLoader::ClLoader(const char *kernel_path, int platform_nr) :
             std::cout << "Invalid device, please try again" << std::endl;
         }
 
-        device_ = all_devices_[choice];
+        device = all_devices_[choice];
         devices_.push_back(all_devices_[choice]);
 
     } else {
         if (platform_nr <= (int) all_devices_.size()) {
-            device_ = all_devices_[platform_nr];
+            device = all_devices_[platform_nr];
             devices_.push_back(all_devices_[platform_nr]);
         } else {
             char error[255];
@@ -71,13 +70,13 @@ ClLoader::ClLoader(const char *kernel_path, int platform_nr) :
         throw ClException("No devices found. Check OpenCL installation!");
     }
 
-    std::cout << "using: " << get_device_description(device_) << std::endl;
+    std::cout << "using: " << get_device_description(device) << std::endl;
 
-    context_ = cl::Context(device_);
+    context_ = cl::Context(device);
 
 }
 
-void ClLoader::LoadKernelFile() {
+void ClWrapper::LoadKernelFile() {
 
     // Load the source code containing the kernel
     std::ifstream in(kernel_path_);
@@ -88,13 +87,13 @@ void ClLoader::LoadKernelFile() {
                                     std::make_pair(kernel_source_string_.c_str(), kernel_source_string_.length() + 1));
 }
 
-void ClLoader::Build(const char *kernelFunctionName) {
+void ClWrapper::Build(const char *kernelFunctionName) {
 
     // Create Command Queue
 #ifdef PROFILING
-    command_queue_ = cl::CommandQueue(context_, device_, CL_QUEUE_PROFILING_ENABLE);
+    command_queue_ = cl::CommandQueue(context_, device, CL_QUEUE_PROFILING_ENABLE);
 #else
-    command_queue_ = cl::CommandQueue(context_, device_);
+    command_queue_ = cl::CommandQueue(context_, device);
 #endif
 
     this->LoadKernelFile();
@@ -105,8 +104,6 @@ void ClLoader::Build(const char *kernelFunctionName) {
 
     // Build Kernel Program
     try {
-//        std::vector<cl::Device> vec;
-//        vec.push_back(device_);
         program_.build(devices_, BUILD_OPTIONS);
     }
     catch (cl::Error &e) {
@@ -129,22 +126,22 @@ void ClLoader::Build(const char *kernelFunctionName) {
     }
 
     // Create OpenCL Kernel
-    kernel_ = cl::Kernel(program_, kernelFunctionName);
+    kernel = cl::Kernel(program_, kernelFunctionName);
 }
 
-void ClLoader::setKernelArg(void *parameter, cl_uint arg_index, size_t size) {
+void ClWrapper::setKernelArg(void *parameter, cl_uint arg_index, size_t size) {
 
-    kernel_.setArg(arg_index, size, parameter);
+    kernel.setArg(arg_index, size, parameter);
 
 }
 
-cl::Buffer ClLoader::AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_size) {
+cl::Buffer ClWrapper::AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_size) {
 
     // Create Memory Buffers
     cl::Buffer buffer(context_, flags, buffer_size);
 
     // Set OpenCL Kernel Parameters
-    kernel_.setArg(arg_index, buffer);
+    kernel.setArg(arg_index, buffer);
 
     buffer_read_times_[arg_index] = 0;
     buffer_write_times_[arg_index] = 0;
@@ -152,35 +149,12 @@ cl::Buffer ClLoader::AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buf
     return buffer;
 }
 
-void ClLoader::WriteBuffer(cl::Buffer buffer, cl_float *array, cl_uint arg_index, size_t size) {
-
-    command_queue_.enqueueWriteBuffer(buffer, CL_TRUE, 0, size, array, NULL, &buffer_write_events_[arg_index]);
-
-#ifdef PROFILING
-    buffer_write_events_[arg_index].wait();
-    buffer_write_times_[arg_index] += getDuration(buffer_write_events_[arg_index]);
-#endif
-
-}
-
-// waits for kernel_event
-void ClLoader::ReWriteBuffer(cl::Buffer buffer, cl_float *array, cl_uint arg_index, size_t size) {
-
-    command_queue_.enqueueWriteBuffer(buffer, CL_TRUE, 0, size, array, &kernel_event_, &buffer_write_events_[arg_index]);
-
-#ifdef PROFILING
-    buffer_write_events_[arg_index].wait();
-    buffer_write_times_[arg_index] += getDuration(buffer_write_events_[arg_index]);
-#endif
-
-}
-
-void ClLoader::Run(const cl::NDRange local_work_size, const cl::NDRange global_work_size) {
+void ClWrapper::Run(const cl::NDRange local_work_size, const cl::NDRange global_work_size) {
 
     std::vector<cl::Event> events = getEvents(buffer_write_events_);
 
     kernel_event_.push_back(cl::Event());
-    int err = command_queue_.enqueueNDRangeKernel(kernel_,
+    int err = command_queue_.enqueueNDRangeKernel(kernel,
                                                   cl::NullRange,
                                                   global_work_size,
                                                   local_work_size,
@@ -194,31 +168,28 @@ void ClLoader::Run(const cl::NDRange local_work_size, const cl::NDRange global_w
 #endif
 
 }
+double ClWrapper::getTotalExecutionTime() {
+    double total = kernel_execution_time_;
 
-void ClLoader::ReadBuffer(cl::Buffer buffer, cl_uint arg_index, size_t buffer_size, cl_float *result) {
-
-    // Copy results from the memory buffer
-    command_queue_.enqueueReadBuffer(buffer, CL_TRUE, 0, buffer_size, result, &kernel_event_,
-                                     &buffer_read_events_[arg_index]);
-
-#ifdef PROFILING
-    command_queue_.finish();
-    buffer_read_times_[arg_index] += getDuration(buffer_read_events_[arg_index]);
-#endif
-
+    for (cl_uint j = 0; j < buffer_write_times_.size(); j++) {
+        total += buffer_write_times_[j];
+        total += buffer_read_times_[j];
+    }
+    return total;
 }
 
-void ClLoader::PrintProfileInfo() {
+
+void ClWrapper::PrintProfileInfo() {
 
     std::cout << kernel_execution_time_ << "; ";
 
-    for(cl_uint j = 0; j < buffer_write_times_.size(); j++) {
+    for (cl_uint j = 0; j < buffer_write_times_.size(); j++) {
         std::cout << buffer_write_times_[j] << "; " << buffer_read_times_[j] << "; ";
     }
 
 }
 
-double ClLoader::getDuration(cl::Event event) {
+double ClWrapper::getDuration(cl::Event event) {
 
     cl_ulong start_time, end_time;
     event.getProfilingInfo(CL_PROFILING_COMMAND_START, &start_time);
@@ -228,7 +199,7 @@ double ClLoader::getDuration(cl::Event event) {
 
 }
 
-std::string ClLoader::get_device_description(const cl::Device device) {
+std::string ClWrapper::get_device_description(const cl::Device device) {
     std::string name, vendor, type, version;
 
     name = device.getInfo<CL_DEVICE_NAME>();
@@ -240,7 +211,7 @@ std::string ClLoader::get_device_description(const cl::Device device) {
     return name + " | " + vendor + " | " + type + " | " + version;
 }
 
-std::vector<cl::Event> ClLoader::getEvents(std::map<int, cl::Event> myMap) {
+std::vector<cl::Event> ClWrapper::getEvents(std::map<int, cl::Event> myMap) {
 
     std::vector<cl::Event> retVal;
     for (std::map<int, cl::Event>::iterator it = myMap.begin();
@@ -250,7 +221,7 @@ std::vector<cl::Event> ClLoader::getEvents(std::map<int, cl::Event> myMap) {
     return retVal;
 };
 
-const char *ClLoader::device_type_string(cl_device_type type) {
+const char *ClWrapper::device_type_string(cl_device_type type) {
     switch (type) {
         case CL_DEVICE_TYPE_CPU:
             return "CPU";
@@ -263,7 +234,7 @@ const char *ClLoader::device_type_string(cl_device_type type) {
     }
 }
 
-const char *ClLoader::get_error_string(cl_int error) {
+const char *ClWrapper::get_error_string(cl_int error) {
     switch (error) {
         case -1:
             return "CL_DEVICE_NOT_FOUND";

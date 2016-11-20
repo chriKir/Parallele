@@ -5,7 +5,7 @@
 #include <iostream>
 #include <malloc.h>
 
-#include "ClLoader.h"
+#include "ClWrapper.h"
 
 //#define PRINT_MTX
 
@@ -28,7 +28,7 @@ int main() {
 
     try {
 
-        ClLoader *loader = new ClLoader("../matrix.c", -1);
+        ClWrapper *loader = new ClWrapper("../matrix.c", -1);
 
         loader->Build("matrix");
 

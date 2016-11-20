@@ -9,7 +9,7 @@
 // TODO: type..
 //#define TYPE float
 
-#include "ClLoader.h"
+#include "ClWrapper.h"
 
 //#define PRINT_MTX
 

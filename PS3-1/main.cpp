@@ -9,7 +9,7 @@
 // TODO: type..
 //#define TYPE float
 
-#include "ClLoader.h"
+#include "ClWrapper.h"
 
 //#define PRINT_MTX
 
@@ -37,7 +37,7 @@ int main() {
 
     try {
 
-        ClLoader *loader = new ClLoader("../jacobi.c", -1);
+        ClWrapper *loader = new ClWrapper("../jacobi.c", -1);
 
         loader->Build("jacobi");
 

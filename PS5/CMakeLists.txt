@@ -13,8 +13,8 @@ include_directories(${OpenCL_INCLUDE_DIR})
 set(SOURCE_FILES
         main.cpp
         ../include/time_ms.h
-        ../include/ClLoader.cpp
-        ../include/ClLoader.h)
+        ../include/ClWrapper.cpp
+        ../include/ClWrapper.h)
 
 add_executable(PS5 ${SOURCE_FILES})
 

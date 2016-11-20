@@ -6,10 +6,10 @@
 #include <cmath>
 #include <malloc.h>
 
-#include "ClLoader.h"
+#include "ClWrapper.h"
 
 //#define PRINT_MTX
-
+#define PROFILING
 
 void printMatrix(int rows, int columns, cl_float *matrix) {
 
@@ -34,7 +34,7 @@ int main() {
 
     try {
 
-        ClLoader *loader = new ClLoader("../jacobi.c", 0);
+        ClWrapper *loader = new ClWrapper("../jacobi.c", 0);
 
         loader->Build("jacobi");
 

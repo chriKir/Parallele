@@ -12,25 +12,26 @@
 #include <vector>
 
 #define __CL_ENABLE_EXCEPTIONS
+
 #include <CL/cl.hpp>
 #include <map>
 
 #define BUILD_OPTIONS "-cl-std=CL1.2" // -cl-nv-verbose -Werror "
+#define PROFILING
 
 #define CL_ERRCHECK(__err) \
 if(__err != CL_SUCCESS) { \
     fprintf(stderr, "OpenCL Assertion failure in %s:%d:\n", __FILE__, __LINE__); \
-    fprintf(stderr, "Error code: %s\n",  ClLoader::get_error_string(__err)); \
+    fprintf(stderr, "Error code: %s\n",  ClWrapper::get_error_string(__err)); \
     throw ClException("ClException"); \
 }
 
-class ClLoader {
+class ClWrapper {
 private:
     std::vector<cl::Platform> platforms_;
     std::vector<cl::Device> devices_;
     std::vector<cl::Device> all_devices_;
 
-    cl::Device device_;
 
     cl::Context context_;
     cl::CommandQueue command_queue_;
@@ -48,20 +49,21 @@ private:
     std::string kernel_source_string_;
     cl::Program::Sources sources_;
 
-    cl::Kernel kernel_;
     std::vector<cl::Event> kernel_event_;
 
     void LoadKernelFile();
 
 public:
 
+    cl::Device device;
+    cl::Kernel kernel;
     /**
      * init OpenCL Device. If device_nr = -1 asks which device
      * @param kernel_path path to kernel file
      * @param platform_nr available devices are nubered starting from 0. -1 means ask for device
      * @throws ClException if device_nr is not available
      */
-    ClLoader(const char *kernel_path, int platform_nr);
+    ClWrapper(const char *kernel_path, int platform_nr);
 
     /**
      * builds the kernel and prints compile errors
@@ -94,7 +96,18 @@ public:
      * @param arg_index index of the argument
      * @param size size of the array
      */
-    void WriteBuffer(cl::Buffer buffer, cl_float *array, cl_uint arg_index, size_t size);
+    template<typename T>
+    void WriteBuffer(cl::Buffer buffer, T *array, cl_uint arg_index, size_t size) {
+
+        buffer_write_events_[arg_index] = cl::Event();
+        command_queue_.enqueueWriteBuffer(buffer, CL_TRUE, 0, size, array, NULL, &buffer_write_events_[arg_index]);
+
+#ifdef PROFILING
+        buffer_write_events_[arg_index].wait();
+        buffer_write_times_[arg_index] += getDuration(buffer_write_events_[arg_index]);
+#endif
+
+    }
 
     /**
      * Writes Data into a buffer. Waits for previous kernel execution to finish
@@ -103,7 +116,20 @@ public:
      * @param arg_index
      * @param size
      */
-    void ReWriteBuffer(cl::Buffer buffer, cl_float *array, cl_uint arg_index, size_t size);
+    template<typename T>
+    void ReWriteBuffer(cl::Buffer buffer, T *array, cl_uint arg_index, size_t size) {
+
+        buffer_write_events_[arg_index] = cl::Event();
+        command_queue_.enqueueWriteBuffer(buffer, CL_TRUE, 0, size, array, &kernel_event_,
+                                          &buffer_write_events_[arg_index]);
+
+#ifdef PROFILING
+        buffer_write_events_[arg_index].wait();
+        buffer_write_times_[arg_index] += getDuration(buffer_write_events_[arg_index]);
+//        std::cout << buffer_write_times_[arg_index] << std::endl;
+#endif
+
+    }
 
     /**
      * Runs the OpenCL Kernel.
@@ -119,9 +145,24 @@ public:
      * @param buffer_size
      * @param result
      */
-    void ReadBuffer(cl::Buffer buffer, cl_uint arg_index, size_t buffer_size, cl_float *result);
+    template<typename T>
+    void ReadBuffer(cl::Buffer buffer, cl_uint arg_index, size_t buffer_size, T *result) {
+
+        buffer_read_events_[arg_index] = cl::Event();
+
+        // Copy results from the memory buffer
+        command_queue_.enqueueReadBuffer(buffer, CL_TRUE, 0, buffer_size, result, &kernel_event_,
+                                         &buffer_read_events_[arg_index]);
+
+#ifdef PROFILING
+        command_queue_.finish();
+        buffer_read_times_[arg_index] += getDuration(buffer_read_events_[arg_index]);
+#endif
+
+    }
 
     void PrintProfileInfo();
+    double getTotalExecutionTime();
 
 
     // Helper functions

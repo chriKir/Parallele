@@ -4,7 +4,7 @@
 
 #include <iostream>
 #include <malloc.h>
-#include "ClLoader.h"
+#include "ClWrapper.h"
 #include "time_ms.h"
 
 #define PRINT_MTX
@@ -57,7 +57,7 @@ int main() {
             }
         }
 
-        ClLoader *loader = new ClLoader("../matrix.c", 0);
+        ClWrapper *loader = new ClWrapper("../matrix.c", 0);
 
         loader->Build("matrix");
 
@@ -93,7 +93,7 @@ int main() {
         return 0;
 
     } catch (const cl::Error &e) {
-        std::cerr << "OpenCL exception: " << e.what() << " : " << ClLoader::get_error_string(e.err());
+        std::cerr << "OpenCL exception: " << e.what() << " : " << ClWrapper::get_error_string(e.err());
     } catch (const std::exception &e) {
 
         std::cerr << "Exception thrown: " << e.what();
