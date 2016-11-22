@@ -3,8 +3,6 @@
 
 #include "ClWrapper.h"
 
-#include "time_ms.h"
-
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "TemplateArgumentsIssues"
 #define VALUE cl_int
@@ -15,11 +13,11 @@ void printArray(VALUE *vec, size_t N);
 
 bool validateSum(VALUE sum, size_t N);
 
-VALUE iterativeReduction(VALUE *vector, size_t N);
-
 void executev1(ClWrapper cl, cl_uint N);
 
 void executev2(ClWrapper cl, cl_uint N, cl_uint WORKGROUP_SIZE);
+
+void executev3(ClWrapper cl, cl_uint N, cl_uint WORKGROUP_SIZE);
 
 int main() {
 
@@ -29,12 +27,13 @@ int main() {
 
         std::cout << std::setw(7) << "version" << std::setw(7) << "N" << std::setw(15) << "Time" << std::endl;
 
-        cl_uint N = 16384;
-        cl_uint WORKGROUP_SIZE = 64;
+        cl_uint N = 1024;
+        cl_uint WORKGROUP_SIZE = 4;
 
-        for (cl_uint n = 1024; n < N; n *= 2) {
+        for (cl_uint n = 4; n < N; n *= 2) {
             executev1(cl, n);
             executev2(cl, n, WORKGROUP_SIZE);
+            executev3(cl, n, WORKGROUP_SIZE);
         }
         return 0;
 
@@ -74,10 +73,42 @@ void executev1(ClWrapper cl, cl_uint N) {
 
     validateSum(result[0], N);
     std::cout << std::setw(7) << "1" << std::setw(7) << N << std::setw(15) << cl.getTotalExecutionTime() << "ms"
-              << std::setw(25)<< (validateSum(result[0], N) ? "" : " ERROR: validation failed") << std::endl;
+              << std::setw(25) << (validateSum(result[0], N) ? "" : " ERROR: validation failed") << std::endl;
 };
 
 void executev2(ClWrapper cl, cl_uint N, cl_uint WORKGROUP_SIZE) {
+
+    VALUE *vec = (VALUE *) malloc(sizeof(VALUE) * N);
+    VALUE *result = (VALUE *) malloc(sizeof(VALUE) * N);
+
+    fillArray(vec, N);
+    for (size_t i = 0; i < N; i++) { result[i] = 0; }
+
+
+    cl.Build("reduction_v2");
+
+    cl::Buffer b_array = cl.AddBuffer(CL_READ_ONLY_CACHE, 0, sizeof(VALUE) * N);
+    cl::Buffer b_result = cl.AddBuffer(CL_READ_WRITE_CACHE, 1, sizeof(VALUE) * N);
+
+    cl.WriteBuffer(b_array, vec, 0, sizeof(VALUE) * N);
+    cl.WriteBuffer(b_result, result, 1, sizeof(VALUE) * N);
+
+    cl.kernel.setArg(2, sizeof(VALUE) * N, NULL);
+
+    cl::NDRange global(N);
+    cl::NDRange local(N);
+    cl.Run(local, global);
+
+    cl.ReadBuffer(b_result, 2, sizeof(VALUE) * N, result);
+//    printArray(result, N);
+
+    validateSum(result[0], N);
+    std::cout << std::setw(7) << "2" << std::setw(7) << N << std::setw(15) << cl.getTotalExecutionTime() << "ms"
+              << std::setw(25) << (validateSum(result[0], N) ? "" : "ERROR: validation failed") << std::endl;
+
+};
+
+void executev3(ClWrapper cl, cl_uint N, cl_uint WORKGROUP_SIZE) {
 
     VALUE *vec = (VALUE *) malloc(sizeof(VALUE) * N);
     VALUE *result = (VALUE *) malloc(sizeof(VALUE) * N);
@@ -103,27 +134,19 @@ void executev2(ClWrapper cl, cl_uint N, cl_uint WORKGROUP_SIZE) {
 
         cl.ReadBuffer(b_result, 2, sizeof(VALUE) * N, result);
 
-        cl.kernel.setArg(0, b_result);
+        cl::Buffer b_temp = b_result;
+        b_result = b_array;
+        b_array = b_temp;
+
+        cl.kernel.setArg(0, b_array);
+        cl.kernel.setArg(1, b_result);
     }
 
-    std::cout << std::setw(7) << "2" << std::setw(7) << N << std::setw(15) << cl.getTotalExecutionTime() << "ms"
-              << std::setw(25)<< (validateSum(result[0], N) ? "" : "ERROR: validation failed") << std::endl;
+    validateSum(result[0], N);
+    std::cout << std::setw(7) << "3" << std::setw(7) << N << std::setw(15) << cl.getTotalExecutionTime() << "ms"
+              << std::setw(25) << (validateSum(result[0], N) ? "" : "ERROR: validation failed") << std::endl;
 
 };
-
-VALUE iterativeReduction(VALUE *vector, size_t N) {
-
-    unsigned long start_time = time_ms();
-    VALUE sum = 0;
-    for (size_t i = 0; i < N; ++i) {
-        sum += vector[i];
-    }
-
-    printf("Time for iterative reduction: %9lu ms\n", time_ms() - start_time);
-
-    return sum;
-}
-
 
 void printArray(VALUE *vec, size_t N) {
     size_t i = 0;
@@ -133,7 +156,6 @@ void printArray(VALUE *vec, size_t N) {
     }
     printf("%d}\n", vec[i]);
 }
-
 
 void fillArray(VALUE *vec, size_t N) {
     for (size_t i = 1; i <= N; ++i) {

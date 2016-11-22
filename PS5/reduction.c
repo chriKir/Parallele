@@ -26,10 +26,6 @@ __kernel void reduction_v2(
     int local_size = get_local_size(0);
     int group_id = get_group_id(0);
 
-//    printf("%d/%d:%d/%d_%d\n", local_index, local_size, global_index, global_size, group_id);
-//    printf("%d\n", buffer[55]);
-//    printf("%d\n", local_size);
-
     if (global_index < global_size) {
         scratch[local_index] = buffer[global_index];
     } else {
