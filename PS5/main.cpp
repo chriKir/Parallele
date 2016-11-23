@@ -15,7 +15,7 @@ bool validateSum(VALUE sum, size_t N);
 
 void executev1(ClWrapper cl, cl_uint N);
 
-void executev2(ClWrapper cl, cl_uint N, cl_uint WORKGROUP_SIZE);
+void executev2(ClWrapper cl, cl_uint N);
 
 void executev3(ClWrapper cl, cl_uint N, cl_uint WORKGROUP_SIZE);
 
@@ -23,7 +23,7 @@ int main() {
 
     try {
 
-        ClWrapper cl("../reduction.c", -1);
+        ClWrapper cl("reduction.c", -1);
 
         std::cout << std::setw(7) << "version" << std::setw(7) << "N" << std::setw(15) << "Time" << std::endl;
 
@@ -32,7 +32,7 @@ int main() {
 
         for (cl_uint n = 4; n < N; n *= 2) {
             executev1(cl, n);
-            executev2(cl, n, WORKGROUP_SIZE);
+            executev2(cl, n);
             executev3(cl, n, WORKGROUP_SIZE);
         }
         return 0;
@@ -76,7 +76,7 @@ void executev1(ClWrapper cl, cl_uint N) {
               << std::setw(25) << (validateSum(result[0], N) ? "" : " ERROR: validation failed") << std::endl;
 };
 
-void executev2(ClWrapper cl, cl_uint N, cl_uint WORKGROUP_SIZE) {
+void executev2(ClWrapper cl, cl_uint N) {
 
     VALUE *vec = (VALUE *) malloc(sizeof(VALUE) * N);
     VALUE *result = (VALUE *) malloc(sizeof(VALUE) * N);

@@ -1,10 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
 project(PS5)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build")
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+configure_file(reduction.c reduction.c COPYONLY)
 
-#set( CMAKE_VERBOSE_MAKEFILE on )
+set(CMAKE_VERBOSE_MAKEFILE on)
 
 find_package(OpenCL REQUIRED)
 include_directories(${OpenCL_INCLUDE_DIR})
@@ -12,9 +11,8 @@ include_directories(${OpenCL_INCLUDE_DIR})
 
 set(SOURCE_FILES
         main.cpp
-        ../include/time_ms.h
         ../include/ClWrapper.cpp
-        ../include/ClWrapper.h)
+        )
 
 add_executable(PS5 ${SOURCE_FILES})
 

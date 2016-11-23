@@ -37,7 +37,7 @@ int main() {
 
     try {
 
-        ClWrapper *loader = new ClWrapper("../jacobi.c", -1);
+        ClWrapper *loader = new ClWrapper("jacobi.c", -1);
 
         loader->Build("jacobi");
 
@@ -45,7 +45,7 @@ int main() {
 
             for (int iterations = 100; iterations < 100000; iterations *= 10) {
 
-                cl_float factor = (cl_float)std::pow(1/matrix_size, 2);
+                cl_float factor = std::pow((float)(1/matrix_size), 2);
 
                 loader->setKernelArg(&factor, 3, sizeof(cl_float));
                 loader->setKernelArg(&matrix_size, 4, sizeof(cl_uint));
