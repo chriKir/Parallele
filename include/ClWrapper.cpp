@@ -80,11 +80,16 @@ void ClWrapper::LoadKernelFile() {
 
     // Load the source code containing the kernel
     std::ifstream in(kernel_path_);
-    kernel_source_string_ = std::string((std::istreambuf_iterator<char>(in)),
-                                        std::istreambuf_iterator<char>());
 
-    sources_ = cl::Program::Sources(1,
-                                    std::make_pair(kernel_source_string_.c_str(), kernel_source_string_.length() + 1));
+    if (in) {
+        kernel_source_string_ = std::string((std::istreambuf_iterator<char>(in)),
+                                            std::istreambuf_iterator<char>());
+
+        sources_ = cl::Program::Sources(1,
+                                        std::make_pair(kernel_source_string_.c_str(), kernel_source_string_.length() + 1));
+    } else {
+        throw ClException("File not found: " + kernel_path_);
+    }
 }
 
 void ClWrapper::Build(std::string kernelFunctionName) {
