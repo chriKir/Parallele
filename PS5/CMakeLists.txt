@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(PS5)
 
-configure_file(reduction.c reduction.c COPYONLY)
+configure_file(reduction.cl reduction.cl COPYONLY)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 

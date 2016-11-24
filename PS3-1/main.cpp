@@ -6,13 +6,9 @@
 #include <cmath>
 #include <malloc.h>
 
-// TODO: type..
-//#define TYPE float
-
 #include "ClWrapper.h"
 
 //#define PRINT_MTX
-
 
 void printMatrix(int rows, int columns, cl_float *matrix) {
 
@@ -37,7 +33,7 @@ int main() {
 
     try {
 
-        ClWrapper *loader = new ClWrapper("jacobi.c", -1);
+        ClWrapper *loader = new ClWrapper("jacobi.cl", -1);
 
         loader->Build("jacobi");
 

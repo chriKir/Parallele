@@ -5,13 +5,13 @@
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "TemplateArgumentsIssues"
-#define VALUE cl_int
+#define DTYPE_COLOR_VALUE cl_int
 
-void fillArray(VALUE *vec, size_t N);
+void fillArray(DTYPE_COLOR_VALUE *vec, size_t N);
 
-void printArray(VALUE *vec, size_t N);
+void printArray(DTYPE_COLOR_VALUE *vec, size_t N);
 
-bool validateSum(VALUE sum, size_t N);
+bool validateSum(DTYPE_COLOR_VALUE sum, size_t N);
 
 void executev1(ClWrapper cl, cl_uint N);
 
@@ -23,7 +23,7 @@ int main() {
 
     try {
 
-        ClWrapper cl("reduction.c", -1);
+        ClWrapper cl("reduction.cl", -1);
 
         std::cout << std::setw(7) << "version" << std::setw(7) << "N" << std::setw(15) << "Time" << std::endl;
 
@@ -50,8 +50,8 @@ int main() {
 
 void executev1(ClWrapper cl, cl_uint N) {
 
-    VALUE *vec = (VALUE *) malloc(sizeof(VALUE) * N);
-    VALUE *result = (VALUE *) malloc(sizeof(VALUE) * N);
+    DTYPE_COLOR_VALUE *vec = (DTYPE_COLOR_VALUE *) malloc(sizeof(DTYPE_COLOR_VALUE) * N);
+    DTYPE_COLOR_VALUE *result = (DTYPE_COLOR_VALUE *) malloc(sizeof(DTYPE_COLOR_VALUE) * N);
 
     fillArray(vec, N);
     for (size_t i = 0; i < N; i++) { result[i] = 0; }
@@ -59,17 +59,17 @@ void executev1(ClWrapper cl, cl_uint N) {
 
     cl.Build("reduction_v1");
 
-    cl::Buffer b_array = cl.AddBuffer(CL_READ_ONLY_CACHE, 0, sizeof(VALUE) * N);
-    cl::Buffer b_result = cl.AddBuffer(CL_READ_WRITE_CACHE, 1, sizeof(VALUE) * N);
+    cl::Buffer b_array = cl.AddBuffer(CL_READ_ONLY_CACHE, 0, sizeof(DTYPE_COLOR_VALUE) * N);
+    cl::Buffer b_result = cl.AddBuffer(CL_READ_WRITE_CACHE, 1, sizeof(DTYPE_COLOR_VALUE) * N);
 
-    cl.WriteBuffer(b_array, vec, 0, sizeof(VALUE) * N);
-    cl.WriteBuffer(b_result, result, 1, sizeof(VALUE) * N);
+    cl.WriteBuffer(b_array, vec, 0, sizeof(DTYPE_COLOR_VALUE) * N);
+    cl.WriteBuffer(b_result, result, 1, sizeof(DTYPE_COLOR_VALUE) * N);
 
     cl::NDRange global(N);
 
     cl.Run(cl::NullRange, global);
 
-    cl.ReadBuffer(b_result, 2, sizeof(VALUE) * N, result);
+    cl.ReadBuffer(b_result, 2, sizeof(DTYPE_COLOR_VALUE) * N, result);
 
     validateSum(result[0], N);
     std::cout << std::setw(7) << "1" << std::setw(7) << N << std::setw(15) << cl.getTotalExecutionTime() << "ms"
@@ -78,8 +78,8 @@ void executev1(ClWrapper cl, cl_uint N) {
 
 void executev2(ClWrapper cl, cl_uint N) {
 
-    VALUE *vec = (VALUE *) malloc(sizeof(VALUE) * N);
-    VALUE *result = (VALUE *) malloc(sizeof(VALUE) * N);
+    DTYPE_COLOR_VALUE *vec = (DTYPE_COLOR_VALUE *) malloc(sizeof(DTYPE_COLOR_VALUE) * N);
+    DTYPE_COLOR_VALUE *result = (DTYPE_COLOR_VALUE *) malloc(sizeof(DTYPE_COLOR_VALUE) * N);
 
     fillArray(vec, N);
     for (size_t i = 0; i < N; i++) { result[i] = 0; }
@@ -87,19 +87,19 @@ void executev2(ClWrapper cl, cl_uint N) {
 
     cl.Build("reduction_v2");
 
-    cl::Buffer b_array = cl.AddBuffer(CL_READ_ONLY_CACHE, 0, sizeof(VALUE) * N);
-    cl::Buffer b_result = cl.AddBuffer(CL_READ_WRITE_CACHE, 1, sizeof(VALUE) * N);
+    cl::Buffer b_array = cl.AddBuffer(CL_READ_ONLY_CACHE, 0, sizeof(DTYPE_COLOR_VALUE) * N);
+    cl::Buffer b_result = cl.AddBuffer(CL_READ_WRITE_CACHE, 1, sizeof(DTYPE_COLOR_VALUE) * N);
 
-    cl.WriteBuffer(b_array, vec, 0, sizeof(VALUE) * N);
-    cl.WriteBuffer(b_result, result, 1, sizeof(VALUE) * N);
+    cl.WriteBuffer(b_array, vec, 0, sizeof(DTYPE_COLOR_VALUE) * N);
+    cl.WriteBuffer(b_result, result, 1, sizeof(DTYPE_COLOR_VALUE) * N);
 
-    cl.kernel.setArg(2, sizeof(VALUE) * N, NULL);
+    cl.kernel.setArg(2, sizeof(DTYPE_COLOR_VALUE) * N, NULL);
 
     cl::NDRange global(N);
     cl::NDRange local(N);
     cl.Run(local, global);
 
-    cl.ReadBuffer(b_result, 2, sizeof(VALUE) * N, result);
+    cl.ReadBuffer(b_result, 2, sizeof(DTYPE_COLOR_VALUE) * N, result);
 //    printArray(result, N);
 
     validateSum(result[0], N);
@@ -110,8 +110,8 @@ void executev2(ClWrapper cl, cl_uint N) {
 
 void executev3(ClWrapper cl, cl_uint N, cl_uint WORKGROUP_SIZE) {
 
-    VALUE *vec = (VALUE *) malloc(sizeof(VALUE) * N);
-    VALUE *result = (VALUE *) malloc(sizeof(VALUE) * N);
+    DTYPE_COLOR_VALUE *vec = (DTYPE_COLOR_VALUE *) malloc(sizeof(DTYPE_COLOR_VALUE) * N);
+    DTYPE_COLOR_VALUE *result = (DTYPE_COLOR_VALUE *) malloc(sizeof(DTYPE_COLOR_VALUE) * N);
 
     fillArray(vec, N);
     for (size_t i = 0; i < N; i++) { result[i] = 0; }
@@ -119,20 +119,20 @@ void executev3(ClWrapper cl, cl_uint N, cl_uint WORKGROUP_SIZE) {
 
     cl.Build("reduction_v2");
 
-    cl::Buffer b_array = cl.AddBuffer(CL_READ_ONLY_CACHE, 0, sizeof(VALUE) * N);
-    cl::Buffer b_result = cl.AddBuffer(CL_READ_WRITE_CACHE, 1, sizeof(VALUE) * N);
+    cl::Buffer b_array = cl.AddBuffer(CL_READ_ONLY_CACHE, 0, sizeof(DTYPE_COLOR_VALUE) * N);
+    cl::Buffer b_result = cl.AddBuffer(CL_READ_WRITE_CACHE, 1, sizeof(DTYPE_COLOR_VALUE) * N);
 
-    cl.WriteBuffer(b_array, vec, 0, sizeof(VALUE) * N);
-    cl.WriteBuffer(b_result, result, 1, sizeof(VALUE) * N);
+    cl.WriteBuffer(b_array, vec, 0, sizeof(DTYPE_COLOR_VALUE) * N);
+    cl.WriteBuffer(b_result, result, 1, sizeof(DTYPE_COLOR_VALUE) * N);
 
-    cl.kernel.setArg(2, sizeof(VALUE) * N, NULL);
+    cl.kernel.setArg(2, sizeof(DTYPE_COLOR_VALUE) * N, NULL);
 
     for (int i = N; i > 0; i /= WORKGROUP_SIZE) {
         cl::NDRange global(N);
         cl::NDRange local(WORKGROUP_SIZE);
         cl.Run(local, global);
 
-        cl.ReadBuffer(b_result, 2, sizeof(VALUE) * N, result);
+        cl.ReadBuffer(b_result, 2, sizeof(DTYPE_COLOR_VALUE) * N, result);
 
         cl::Buffer b_temp = b_result;
         b_result = b_array;
@@ -148,7 +148,7 @@ void executev3(ClWrapper cl, cl_uint N, cl_uint WORKGROUP_SIZE) {
 
 };
 
-void printArray(VALUE *vec, size_t N) {
+void printArray(DTYPE_COLOR_VALUE *vec, size_t N) {
     size_t i = 0;
     printf("Array: { ");
     for (; i < N - 1; ++i) {
@@ -157,14 +157,14 @@ void printArray(VALUE *vec, size_t N) {
     printf("%d}\n", vec[i]);
 }
 
-void fillArray(VALUE *vec, size_t N) {
+void fillArray(DTYPE_COLOR_VALUE *vec, size_t N) {
     for (size_t i = 1; i <= N; ++i) {
-        vec[i - 1] = (VALUE) i;
+        vec[i - 1] = (DTYPE_COLOR_VALUE) i;
     }
 }
 
 bool validateSum(int sum, size_t N) {
-    VALUE check = (VALUE) (N * (N + 1) / 2);
+    DTYPE_COLOR_VALUE check = (DTYPE_COLOR_VALUE) (N * (N + 1) / 2);
     if (sum == check) {
         return true;
     } else {

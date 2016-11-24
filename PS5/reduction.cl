@@ -1,8 +1,8 @@
-#define VALUE int
+#define DTYPE_COLOR_VALUE int
 
 __kernel void reduction_v1(
-        __const __global VALUE *buffer,
-        __global VALUE *result
+        __const __global DTYPE_COLOR_VALUE *buffer,
+        __global DTYPE_COLOR_VALUE *result
 ) {
 
     int sum = 0;
@@ -14,9 +14,9 @@ __kernel void reduction_v1(
 }
 
 __kernel void reduction_v2(
-        __const __global VALUE *buffer,
-        __global VALUE *result,
-        __local VALUE *scratch
+        __const __global DTYPE_COLOR_VALUE *buffer,
+        __global DTYPE_COLOR_VALUE *result,
+        __local DTYPE_COLOR_VALUE *scratch
 ) {
 
     int global_index = get_global_id(0);
@@ -37,8 +37,8 @@ __kernel void reduction_v2(
     for (int offset = local_size / 2; offset > 0; offset >>= 1) {
 
         if (local_index < offset) {
-            VALUE other = scratch[local_index + offset];
-            VALUE mine = scratch[local_index];
+            DTYPE_COLOR_VALUE other = scratch[local_index + offset];
+            DTYPE_COLOR_VALUE mine = scratch[local_index];
             scratch[local_index] = mine + other;
         }
         barrier(CLK_LOCAL_MEM_FENCE);

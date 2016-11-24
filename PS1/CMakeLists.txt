@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(PS1)
 
-configure_file(matrix.c matrix.c COPYONLY)
+configure_file(matrix.cl matrix.cl COPYONLY)
 
 set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 

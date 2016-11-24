@@ -86,7 +86,8 @@ void ClWrapper::LoadKernelFile() {
                                             std::istreambuf_iterator<char>());
 
         sources_ = cl::Program::Sources(1,
-                                        std::make_pair(kernel_source_string_.c_str(), kernel_source_string_.length() + 1));
+                                        std::make_pair(kernel_source_string_.c_str(),
+                                                       kernel_source_string_.length() + 1));
     } else {
         throw ClException("File not found: " + kernel_path_);
     }
@@ -150,6 +151,7 @@ cl::Buffer ClWrapper::AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t bu
 
     buffer_read_times_[arg_index] = 0;
     buffer_write_times_[arg_index] = 0;
+    buffer_sizes_[arg_index] = buffer_size;
 
     return buffer;
 }
@@ -173,6 +175,7 @@ void ClWrapper::Run(const cl::NDRange local_work_size, const cl::NDRange global_
 #endif
 
 }
+
 double ClWrapper::getTotalExecutionTime() {
     double total = kernel_execution_time_;
 

@@ -57,7 +57,7 @@ int main() {
             }
         }
 
-        ClWrapper *loader = new ClWrapper("matrix.c", 0);
+        ClWrapper *loader = new ClWrapper("matrix.cl", 0);
 
         loader->Build("matrix");
 

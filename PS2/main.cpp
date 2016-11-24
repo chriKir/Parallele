@@ -28,7 +28,7 @@ int main() {
 
     try {
 
-        ClWrapper *loader = new ClWrapper("matrix.c", -1);
+        ClWrapper *loader = new ClWrapper("matrix.cl", -1);
 
         loader->Build("matrix");
 

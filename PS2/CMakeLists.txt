@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(PS2)
 
-configure_file(matrix.c matrix.c COPYONLY)
+configure_file(matrix.cl matrix.cl COPYONLY)
 
 #set( CMAKE_VERBOSE_MAKEFILE on )
 

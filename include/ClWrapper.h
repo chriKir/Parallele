@@ -32,7 +32,6 @@ private:
     std::vector<cl::Device> devices_;
     std::vector<cl::Device> all_devices_;
 
-
     cl::Context context_;
     cl::CommandQueue command_queue_;
 
@@ -44,6 +43,7 @@ private:
     double kernel_execution_time_ = 0;
     std::map<int, double> buffer_write_times_;
     std::map<int, double> buffer_read_times_;
+    std::map<int, size_t> buffer_sizes_;
 
     std::string kernel_path_;
     std::string kernel_source_string_;
@@ -57,6 +57,7 @@ public:
 
     cl::Device device;
     cl::Kernel kernel;
+
     /**
      * init OpenCL Device. If device_nr = -1 asks which device
      * @param kernel_path path to kernel file
@@ -78,6 +79,7 @@ public:
      * @param arg_index index of the argument
      * @param size size of the data in byte
      */
+    [[deprecated("use cl.kernel.setArg() instead")]]
     void setKernelArg(void *parameter, cl_uint arg_index, size_t size);
 
     /**
@@ -88,6 +90,26 @@ public:
      * @return returns the cl::Buffer reference
      */
     cl::Buffer AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t buffer_size);
+
+    /**
+     * Writes Data into a buffer Uses size associated with argument index.
+     * @param buffer cl::Buffer reference of the buffer
+     * @param array array containing data
+     * @param arg_index index of the argument
+     */
+    template<typename T>
+    void WriteBuffer(cl::Buffer buffer, T *array, cl_uint arg_index) {
+
+        buffer_write_events_[arg_index] = cl::Event();
+        command_queue_.enqueueWriteBuffer(buffer, CL_TRUE, 0, buffer_sizes_[arg_index], array, NULL,
+                                          &buffer_write_events_[arg_index]);
+
+#ifdef PROFILING
+        buffer_write_events_[arg_index].wait();
+        buffer_write_times_[arg_index] += getDuration(buffer_write_events_[arg_index]);
+#endif
+
+    }
 
     /**
      * Writes Data into a buffer
@@ -101,6 +123,30 @@ public:
 
         buffer_write_events_[arg_index] = cl::Event();
         command_queue_.enqueueWriteBuffer(buffer, CL_TRUE, 0, size, array, NULL, &buffer_write_events_[arg_index]);
+
+        buffer_sizes_[arg_index] = size;
+
+#ifdef PROFILING
+        buffer_write_events_[arg_index].wait();
+        buffer_write_times_[arg_index] += getDuration(buffer_write_events_[arg_index]);
+#endif
+
+    }
+
+    /**
+     * Writes Data into a buffer. Waits for previous kernel execution to finish.
+     * Uses size associated with argument index.
+     * @param buffer
+     * @param array
+     * @param arg_index
+     * @param size
+     */
+    template<typename T>
+    void ReWriteBuffer(cl::Buffer buffer, T *array, cl_uint arg_index) {
+
+        buffer_write_events_[arg_index] = cl::Event();
+        command_queue_.enqueueWriteBuffer(buffer, CL_TRUE, 0, buffer_sizes_[arg_index], array, &kernel_event_,
+                                          &buffer_write_events_[arg_index]);
 
 #ifdef PROFILING
         buffer_write_events_[arg_index].wait();
@@ -123,10 +169,11 @@ public:
         command_queue_.enqueueWriteBuffer(buffer, CL_TRUE, 0, size, array, &kernel_event_,
                                           &buffer_write_events_[arg_index]);
 
+        buffer_sizes_[arg_index] = size;
+
 #ifdef PROFILING
         buffer_write_events_[arg_index].wait();
         buffer_write_times_[arg_index] += getDuration(buffer_write_events_[arg_index]);
-//        std::cout << buffer_write_times_[arg_index] << std::endl;
 #endif
 
     }
@@ -138,6 +185,27 @@ public:
      * @param global_work_size
      */
     void Run(const cl::NDRange local_work_size, const cl::NDRange global_work_size);
+
+    /**
+     * Reads Data from Buffer
+     * @param buffer
+     * @param result
+     */
+    template<typename T>
+    void ReadBuffer(cl::Buffer buffer, cl_uint arg_index, T *result) {
+
+        buffer_read_events_[arg_index] = cl::Event();
+
+        // Copy results from the memory buffer
+        command_queue_.enqueueReadBuffer(buffer, CL_TRUE, 0, buffer_sizes_[arg_index], result, &kernel_event_,
+                                         &buffer_read_events_[arg_index]);
+
+#ifdef PROFILING
+        command_queue_.finish();
+        buffer_read_times_[arg_index] += getDuration(buffer_read_events_[arg_index]);
+#endif
+
+    }
 
     /**
      * Reads Data from Buffer
@@ -162,6 +230,7 @@ public:
     }
 
     void PrintProfileInfo();
+
     double getTotalExecutionTime();
 
 

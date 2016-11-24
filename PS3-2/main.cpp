@@ -34,7 +34,7 @@ int main() {
 
     try {
 
-        ClWrapper *loader = new ClWrapper("jacobi.c", 0);
+        ClWrapper *loader = new ClWrapper("jacobi.cl", 0);
 
         loader->Build("jacobi");
 

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(PS3-1)
 
-configure_file(jacobi.c jacobi.c COPYONLY)
+configure_file(jacobi.cl jacobi.cl COPYONLY)
 
 #set( CMAKE_VERBOSE_MAKEFILE on )
 
