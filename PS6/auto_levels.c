@@ -1,7 +1,7 @@
 //# pragma OPENCL EXTENSION cl_amd_printf :enable
 
-#define DTYPE_COLOR_VALUE uchar
-#define DTYPE_SUM_VALUE ulong
+#define DTYPE_COLOR_VALUE unsigned char
+#define DTYPE_SUM_VALUE unsigned long
 
 #define COMPONENTS (3)
 
@@ -20,7 +20,8 @@ __kernel void mmav_reduction(
         __global DTYPE_SUM_VALUE *wg_sum,
         __local DTYPE_COLOR_VALUE *lmin,
         __local DTYPE_COLOR_VALUE *lmax,
-        __local DTYPE_COLOR_VALUE *lsum
+        __local DTYPE_COLOR_VALUE *lsum,
+        const unsigned int size
 ) {
 
     int global_index = get_global_id(0);
@@ -31,8 +32,8 @@ __kernel void mmav_reduction(
     int group_id = get_group_id(0);
 
     for (size_t component = 0; component < COMPONENTS; component++) {
-        int li = local_index + sizeof(DTYPE_COLOR_VALUE) * component;
-        int gi = global_index + sizeof(DTYPE_COLOR_VALUE) * component;
+        size_t li = local_index + sizeof(DTYPE_COLOR_VALUE) * component;
+        size_t gi = global_index + sizeof(DTYPE_COLOR_VALUE) * component;
         if (input != 0) {
             lmin[li] = input[gi];
             lmax[li] = input[gi];
@@ -44,23 +45,25 @@ __kernel void mmav_reduction(
         }
     }
 
-    if (global_index == 0) printf("%d\n", lmin[local_index]);
+//    if (global_index == 0) printf("%d\n", lmin[local_index]);
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
     for (int offset = local_size / 2; offset > 0; offset >>= 1) {
 
         for (size_t component = 0; component < COMPONENTS; component++) {
-            int li = local_index + sizeof(DTYPE_COLOR_VALUE) * component;
-            int gi = global_index + sizeof(DTYPE_COLOR_VALUE) * component;
 
-            if (li < offset) {
+            if (local_index < offset && local_index < size) {
+
+                int li = local_index + sizeof(DTYPE_COLOR_VALUE) * component;
+                int gi = global_index + sizeof(DTYPE_COLOR_VALUE) * component;
+
                 int mine = li;
                 int other = li + offset;
 
-                lmin[li] = min(lmin[mine], lmin[other]);
-                lmax[li] = max(lmax[mine], lmax[other]);
-                lsum[li] = lsum[mine] + lsum[other];
+                lmin[mine] = min(lmin[mine], lmin[other]);
+                lmax[mine] = max(lmax[mine], lmax[other]);
+                lsum[mine] = lsum[mine] + lsum[other];
             }
         }
 
@@ -69,11 +72,10 @@ __kernel void mmav_reduction(
     }
     if (local_index == 0) {
         for (size_t component = 0; component < COMPONENTS; component++) {
-            int li = local_index + sizeof(DTYPE_COLOR_VALUE) * component;
 
-            wg_max[group_id + li] = max(wg_max[group_id + li], lmax[li]);
-            wg_min[group_id + li] = min(wg_min[group_id + li], lmin[li]);
-            wg_sum[group_id + li] += lsum[li];
+            wg_max[group_id + component] = max(wg_max[group_id + component], lmax[component]);
+            wg_min[group_id + component] = min(wg_min[group_id + component], lmin[component]);
+            wg_sum[group_id + component] += lsum[component];
         }
     }
 }

@@ -74,7 +74,6 @@ public:
 
     /**
      * Binds basic argument to the OpenCL Kernel. Use only for basic datatypes as int, float, ...
-     * ADD BUFFERS BEFORE ARGUMENTS
      * @param parameter cast to void*
      * @param arg_index index of the argument
      * @param size size of the data in byte

@@ -26,7 +26,7 @@ int main() {
 
         if (!image) throw ClException("File not found: " + filename);
 
-        ClWrapper cl("auto_levels.cl", 0);
+        ClWrapper cl("auto_levels.c", 0);
         cl.Build("mmav_reduction");
 
 //        int WORKGROUP_SIZE = cl.device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() / 2;
@@ -51,9 +51,9 @@ int main() {
         DTYPE_SUM_VALUE *wg_sum = (DTYPE_SUM_VALUE *) malloc(wg_sum_buffer_size);
 
         for (size_t i = 0; i < wg_buffer_size; i++) {
-            wg_sum[i] = 0;
-            wg_max[i] = 0;
             wg_min[i] = 255;
+            wg_max[i] = 0;
+            wg_sum[i] = 0;
         }
 
         cl::Buffer b_input = cl.AddBuffer(CL_READ_ONLY_CACHE, 0, buffer_size);
@@ -65,11 +65,13 @@ int main() {
         cl.kernel.setArg(5, sizeof(DTYPE_COLOR_VALUE) * WORKGROUP_SIZE, NULL);
         cl.kernel.setArg(6, sizeof(DTYPE_SUM_VALUE) * WORKGROUP_SIZE, NULL);
 
+        cl_uint size = (cl_uint) (height * width);
+        cl.kernel.setArg(7, sizeof(cl_uint), &size);
+
         cl.WriteBuffer(b_input, image, 0);
         cl.WriteBuffer(b_wg_min, wg_min, 1);
         cl.WriteBuffer(b_wg_max, wg_max, 2);
         cl.WriteBuffer(b_wg_sum, wg_sum, 3);
-
 
         for (size_t i = pixel_count; i > 1; i /= WORKGROUP_SIZE) {
             std::cout << "##" << i << std::endl;
@@ -78,8 +80,6 @@ int main() {
             cl::NDRange local(i < WORKGROUP_SIZE ? cl::NullRange : WORKGROUP_SIZE);
 
             cl.Run(local, global);
-
-            cl.kernel.setArg(0, sizeof(cl::Buffer), 0);
 
         }
 

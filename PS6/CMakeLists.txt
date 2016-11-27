@@ -5,7 +5,7 @@ configure_file(test.png test.png COPYONLY)
 configure_file(test_min.png test_min.png COPYONLY)
 configure_file(earth_huge.png earth_huge.png COPYONLY)
 
-configure_file(auto_levels.cl auto_levels.cl COPYONLY)
+configure_file(auto_levels.c auto_levels.c COPYONLY)
 
 find_package(OpenCL REQUIRED)
 include_directories(${OpenCL_INCLUDE_DIR})
