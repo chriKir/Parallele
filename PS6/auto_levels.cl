@@ -1,4 +1,4 @@
-# pragma OPENCL EXTENSION cl_amd_printf :enable
+//# pragma OPENCL EXTENSION cl_amd_printf :enable
 
 #define DTYPE_COLOR_VALUE uchar
 #define DTYPE_SUM_VALUE ulong
@@ -31,41 +31,49 @@ __kernel void mmav_reduction(
     int group_id = get_group_id(0);
 
     for (size_t component = 0; component < COMPONENTS; component++) {
-        size_t local = local_index + sizeof(DTYPE_COLOR_VALUE) * component;
-        size_t global = global_index + sizeof(DTYPE_COLOR_VALUE) * component;
+        int li = local_index + sizeof(DTYPE_COLOR_VALUE) * component;
+        int gi = global_index + sizeof(DTYPE_COLOR_VALUE) * component;
         if (input != 0) {
-            lmin[local] = input[global];
-            lmax[local] = input[global];
-            lsum[local] = input[global];
+            lmin[li] = input[gi];
+            lmax[li] = input[gi];
+            lsum[li] = input[gi];
         } else {
-            lmin[local] = wg_min[global];
-            lmax[local] = wg_max[global];
-            lsum[local] = wg_sum[global];
+            lmin[li] = wg_min[gi];
+            lmax[li] = wg_max[gi];
+            lsum[li] = wg_sum[gi];
         }
     }
+
+    if (global_index == 0) printf("%d\n", lmin[local_index]);
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
     for (int offset = local_size / 2; offset > 0; offset >>= 1) {
 
+        for (size_t component = 0; component < COMPONENTS; component++) {
+            int li = local_index + sizeof(DTYPE_COLOR_VALUE) * component;
+            int gi = global_index + sizeof(DTYPE_COLOR_VALUE) * component;
 
-        if (local_index < offset) {
-            int mine = local_index;
-            int other = local_index + offset;
+            if (li < offset) {
+                int mine = li;
+                int other = li + offset;
 
-
-            lmin[local_index] = min(lmin[mine], lmin[other]);
-            lmax[local_index] = max(lmax[mine], lmax[other]);
-            lsum[local_index] = lsum[mine] + lsum[other];
-            printf("%lu\n", lsum[group_id]);
+                lmin[li] = min(lmin[mine], lmin[other]);
+                lmax[li] = max(lmax[mine], lmax[other]);
+                lsum[li] = lsum[mine] + lsum[other];
+            }
         }
+
 
         barrier(CLK_LOCAL_MEM_FENCE);
     }
-
     if (local_index == 0) {
-        wg_max[group_id] = max(wg_max[group_id], lmax[0]);
-        wg_min[group_id] = min(wg_min[group_id], lmin[0]);
-        wg_sum[group_id] += lsum[0];
+        for (size_t component = 0; component < COMPONENTS; component++) {
+            int li = local_index + sizeof(DTYPE_COLOR_VALUE) * component;
+
+            wg_max[group_id + li] = max(wg_max[group_id + li], lmax[li]);
+            wg_min[group_id + li] = min(wg_min[group_id + li], lmin[li]);
+            wg_sum[group_id + li] += lsum[li];
+        }
     }
 }
