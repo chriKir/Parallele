@@ -4,7 +4,6 @@
 
 #include <iostream>
 #include <cmath>
-#include <malloc.h>
 
 #include "ClWrapper.h"
 

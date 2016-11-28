@@ -3,7 +3,6 @@
 //
 
 #include <iostream>
-#include <malloc.h>
 #include "ClWrapper.h"
 #include "time_ms.h"
 

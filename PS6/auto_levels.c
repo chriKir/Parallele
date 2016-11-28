@@ -58,12 +58,12 @@ __kernel void mmav_reduction(
                 int li = local_index + sizeof(DTYPE_COLOR_VALUE) * component;
                 int gi = global_index + sizeof(DTYPE_COLOR_VALUE) * component;
 
-                int mine = li;
-                int other = li + offset;
+                DTYPE_COLOR_VALUE mine = lmin[li];
+                DTYPE_COLOR_VALUE other = lmin[li + offset];
 
-                lmin[mine] = min(lmin[mine], lmin[other]);
-                lmax[mine] = max(lmax[mine], lmax[other]);
-                lsum[mine] = lsum[mine] + lsum[other];
+                lmin[mine] = min(mine, other);
+                lmax[mine] = max(mine, other);
+                lsum[mine] = mine + other;
             }
         }
 

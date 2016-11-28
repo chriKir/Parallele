@@ -29,5 +29,10 @@ set_property(TARGET auto_levels_ocl PROPERTY LANGUAGE CXX)
 set_property(TARGET auto_levels_ocl PROPERTY CXX_STANDARD 11)
 set_property(TARGET auto_levels_ocl PROPERTY CXX_STANDARD_REQUIRED ON)
 
-target_link_libraries(auto_levels_serial ${OpenCL_LIBRARY} m)
-target_link_libraries(auto_levels_ocl ${OpenCL_LIBRARY})
+if (APPLE)
+    target_link_libraries(auto_levels_ocl "-framework opencl")
+else()
+    target_link_libraries(auto_levels_ocl ${OpenCL_LIBRARY} m)
+endif (APPLE)
+
+target_link_libraries(auto_levels_serial)

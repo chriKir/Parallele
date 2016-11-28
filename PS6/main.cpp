@@ -89,7 +89,7 @@ int main() {
 
         for (int c = 0; c < components; c++) {
 
-            std::cout << "component " << c << ": " << +wg_min[c] << " / " << wg_sum[c] << " / " << +wg_max[0]
+            std::cout << "component " << c << ": " << +wg_min[c] << " / " << wg_sum[c] / (height * width) << " / " << +wg_max[0]
                       << std::endl;
         }
 
