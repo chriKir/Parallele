@@ -35,4 +35,4 @@ else()
     target_link_libraries(auto_levels_ocl ${OpenCL_LIBRARY} m)
 endif (APPLE)
 
-target_link_libraries(auto_levels_serial)
+target_link_libraries(auto_levels_serial m)
