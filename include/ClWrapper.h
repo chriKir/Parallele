@@ -7,13 +7,12 @@
 
 #include <stdlib.h>
 #include <iostream>
-#include <malloc.h>
 
 #include <vector>
 
 #define __CL_ENABLE_EXCEPTIONS
 
-#include <CL/cl.hpp>
+#include <cl.hpp>
 #include <map>
 
 #define BUILD_OPTIONS "-cl-std=CL1.2" // -cl-nv-verbose -Werror "

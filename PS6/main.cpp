@@ -26,7 +26,7 @@ int main() {
 
         if (!image) throw ClException("File not found: " + filename);
 
-        ClWrapper cl("auto_levels.c", 0);
+        ClWrapper cl("auto_levels.c", -1);
         cl.Build("mmav_reduction");
 
 //        int WORKGROUP_SIZE = cl.device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() / 2;
