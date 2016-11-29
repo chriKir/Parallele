@@ -3,8 +3,11 @@
 //
 
 #include <ClWrapper.h>
-#include <dSFMT.h>
 #include "Search.h"
+
+extern "C" {
+#include <dSFMT.h>
+}
 
 
 #define SIZE 1000
