@@ -13,8 +13,7 @@ include_directories(${OpenCL_INCLUDE_DIR})
 set(serial
         serial/auto_levels.c
         ../include/stb_image.c
-        ../include/stb_image_write.c
-        )
+        ../include/stb_image_write.c)
 
 set(SOURCE_FILES
         main.cpp

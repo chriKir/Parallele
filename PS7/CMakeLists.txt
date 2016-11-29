@@ -9,26 +9,26 @@ include_directories(${OpenCL_INCLUDE_DIR})
 
 set(serial
         serial/search_serial.c
+        ../include/dSFMT.c)
+
+set(SOURCE_FILES
+        main.cpp
+        ../include/ClWrapper.cpp
         ../include/dSFMT.c
+        Search.cpp
         )
 
-#set(SOURCE_FILES
-#        main.cpp
-#        ../include/ClWrapper.cpp
-#        ../include/stb_image.c
-#        )
-
 add_executable(search_serial ${serial})
-#add_executable(auto_levels_ocl ${SOURCE_FILES})
+add_executable(search_ocl ${SOURCE_FILES})
 
-#set_property(TARGET auto_levels_ocl PROPERTY LANGUAGE CXX)
-#set_property(TARGET auto_levels_ocl PROPERTY CXX_STANDARD 11)
-#set_property(TARGET auto_levels_ocl PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET search_ocl PROPERTY LANGUAGE CXX)
+set_property(TARGET search_ocl PROPERTY CXX_STANDARD 11)
+set_property(TARGET search_ocl PROPERTY CXX_STANDARD_REQUIRED ON)
 
-#if (APPLE)
-#    target_link_libraries(auto_levels_ocl "-framework opencl")
-#else()
-#    target_link_libraries(auto_levels_ocl ${OpenCL_LIBRARY} m)
-#endif (APPLE)
+if (APPLE)
+    target_link_libraries(search_ocl "-framework opencl")
+else()
+    target_link_libraries(search_ocl ${OpenCL_LIBRARY} m)
+endif (APPLE)
 
 target_link_libraries(search_serial m)
