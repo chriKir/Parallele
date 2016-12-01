@@ -38,34 +38,42 @@ void Search::execute(int iterations) {
 
         //create buffer and set args
         cl::Buffer data_buffer = wrapper.AddBuffer(CL_READ_ONLY_CACHE, 0, sizeof(VALUE) * SIZE);
-        cl::Buffer found_buffer = wrapper.AddBuffer(CL_READ_WRITE_CACHE, 1, sizeof(float));
-        cl::Buffer epsilon_buffer = wrapper.AddBuffer(CL_READ_ONLY_CACHE,2, sizeof(double));
+        cl::Buffer val_buffer = wrapper.AddBuffer(CL_READ_ONLY_CACHE,1, sizeof(VALUE));
+        cl::Buffer found_buffer = wrapper.AddBuffer(CL_READ_WRITE_CACHE, 2, sizeof(float));
+        cl::Buffer epsilon_buffer = wrapper.AddBuffer(CL_READ_ONLY_CACHE,3, sizeof(double));
 
         //------------------------------------------
 
+        double total_execution_time =0.0;
         unsigned long long total_found = 0;
         for(int i = 0;i < iterations;i++) {
             //fill data array
             fill_array_with_random_numbers(data);
+            double val = dsfmt_genrand_close1_open2(&rand_state);
+            found = 0;
 
             //write in buffer
             wrapper.WriteBuffer(data_buffer, data, 0);
-            wrapper.WriteBuffer(found_buffer, &found, 1);
-            wrapper.WriteBuffer(epsilon_buffer, &epsilon, 2);
+            wrapper.WriteBuffer(val_buffer,&val,1);
+            wrapper.WriteBuffer(found_buffer, &found, 2);
+            wrapper.WriteBuffer(epsilon_buffer, &epsilon, 3);
 
             //execute buffer
             cl::NDRange global(SIZE);
-
             wrapper.Run(cl::NullRange, global);
-            wrapper.ReadBuffer(found_buffer, 1, &found);
+            wrapper.ReadBuffer(found_buffer, 2, &found);
+
 
             if(found == 1) {
                 total_found++;
             }
+
+            total_execution_time += wrapper.getTotalExecutionTime();
         }
 
         //---------------------------------------------
-        std::cout << total_found << "\n";
+        //todo change correctly in ms
+        std::cout << (total_execution_time/(double)total_found)/1000.0 << "ms \n";
 
     } catch (const cl::Error &e) {
         std::cerr << "OpenCL exception: " << e.what() << " : " << ClWrapper::get_error_string(e.err()) << "\n";

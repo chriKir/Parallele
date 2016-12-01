@@ -11,7 +11,7 @@
 int main(void) {
     std::cout << "Start searching...\n";
     Search search;
-    search.execute(10);
+    search.execute(1000);
     std::cout << "Finished searching...\n";
 }
 
