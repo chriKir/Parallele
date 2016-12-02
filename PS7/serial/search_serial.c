@@ -14,12 +14,17 @@
 #include "dSFMT.h"
 
 int main(int argc, char** argv) {
+    int elems, iters;
+
     if(argc != 3) {
-        printf("Usage: search [elements] [iterations]\nExample: search 1000000 1000\n");
-        return -1;
+        elems = 10000;
+        iters = 1000;
+        printf("Usage: search [elements] [iterations]\nRunning Example: search %d %d\n", elems, iters);
+    } else {
+        elems = atoi(argv[1]);
+        iters = atoi(argv[2]);
     }
 
-    int elems = atoi(argv[1]), iters = atoi(argv[2]);
 
     // allocate memory for data set
     double *data = (double*)malloc(elems*sizeof(double));

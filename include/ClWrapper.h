@@ -7,13 +7,12 @@
 
 #include <stdlib.h>
 #include <iostream>
-
+#include <map>
 #include <vector>
+#include <iomanip>
 
 #define __CL_ENABLE_EXCEPTIONS
-
 #include <cl.hpp>
-#include <map>
 
 #define BUILD_OPTIONS "-cl-std=CL1.2" // -cl-nv-verbose -Werror "
 #define PROFILING
@@ -227,7 +226,7 @@ public:
 
     }
 
-    void PrintProfileInfo();
+    void printProfilingInfo();
 
     double getTotalExecutionTime();
 

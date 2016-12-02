@@ -158,25 +158,27 @@ cl::Buffer ClWrapper::AddBuffer(cl_mem_flags flags, cl_uint arg_index, size_t bu
 
 void ClWrapper::Run(const cl::NDRange local_work_size, const cl::NDRange global_work_size) {
 
-    std::vector<cl::Event> events = getEvents(buffer_write_events_);
+    std::vector<cl::Event> write_events = getEvents(buffer_write_events_);
 
     kernel_event_.push_back(cl::Event());
     int err = command_queue_.enqueueNDRangeKernel(kernel,
                                                   cl::NullRange,
                                                   global_work_size,
                                                   local_work_size,
-                                                  &events,
+                                                  &write_events,
                                                   &kernel_event_.back());
     CL_ERRCHECK(err)
 
 #ifdef PROFILING
     kernel_event_.back().wait();
+    command_queue_.finish();
     kernel_execution_time_ += getDuration(kernel_event_.back());
 #endif
 
 }
 
 double ClWrapper::getTotalExecutionTime() {
+
     double total = kernel_execution_time_;
 
     for (cl_uint j = 0; j < buffer_write_times_.size(); j++) {
@@ -187,13 +189,27 @@ double ClWrapper::getTotalExecutionTime() {
 }
 
 
-void ClWrapper::PrintProfileInfo() {
+#define WIDTH 10
 
-    std::cout << kernel_execution_time_ << "; ";
+void ClWrapper::printProfilingInfo() {
 
+    // print headline
+    std::cout << std::setw(WIDTH) << "kernel";
     for (cl_uint j = 0; j < buffer_write_times_.size(); j++) {
-        std::cout << buffer_write_times_[j] << "; " << buffer_read_times_[j] << "; ";
+        std::cout << std::setw(WIDTH) << "write " << j << ";"
+                  << std::setw(WIDTH) << "read " << j << ";";
     }
+
+    std::cout << std::endl;
+
+    // print data
+    std::cout << kernel_execution_time_ << "; ";
+    for (cl_uint j = 0; j < buffer_write_times_.size(); j++) {
+        std::cout << std::setw(WIDTH) << buffer_write_times_[j] << "; "
+                  << std::setw(WIDTH) << buffer_read_times_[j] << "; ";
+    }
+
+    std::cout << std::endl;
 
 }
 
@@ -203,7 +219,7 @@ double ClWrapper::getDuration(cl::Event event) {
     event.getProfilingInfo(CL_PROFILING_COMMAND_START, &start_time);
     event.getProfilingInfo(CL_PROFILING_COMMAND_END, &end_time);
 
-    return (end_time - start_time) * 0.000001;
+    return (end_time - start_time) * 1e-6;
 
 }
 

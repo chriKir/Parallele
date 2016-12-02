@@ -8,10 +8,10 @@
 
 class Search {
 private:
-    void fill_array_with_random_numbers(double* array);
+    void fill_array_with_random_numbers(double* array, int size);
 public:
     Search();
-    void execute(int iterations);
+    void execute(int iterations, int size);
 
 };
 

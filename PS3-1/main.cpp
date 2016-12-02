@@ -90,7 +90,7 @@ int main() {
 
                 } while (iteration < iterations);
 
-                loader->PrintProfileInfo();
+                loader->printProfilingInfo();
 
                 free(f);
                 free(tmp);

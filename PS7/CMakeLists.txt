@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(PS7)
 
 # copy kernel
-#configure_file(auto_levels.c auto_levels.c COPYONLY)
+configure_file(search.cl search.cl COPYONLY)
 
 find_package(OpenCL REQUIRED)
 include_directories(${OpenCL_INCLUDE_DIR})

@@ -88,7 +88,7 @@ int main() {
             printMatrix(l, n, C);
 #endif
 
-            loader->PrintProfileInfo();
+            loader->printProfilingInfo();
 
             free(A);
             free(B);

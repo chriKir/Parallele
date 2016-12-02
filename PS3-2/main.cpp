@@ -9,7 +9,6 @@
 #include "ClWrapper.h"
 
 //#define PRINT_MTX
-#define PROFILING
 
 void printMatrix(int rows, int columns, cl_float *matrix) {
 
@@ -87,7 +86,7 @@ int main() {
 #endif
 
 
-                loader->PrintProfileInfo();
+                loader->printProfilingInfo();
 
                 free(f);
                 free(u1);
