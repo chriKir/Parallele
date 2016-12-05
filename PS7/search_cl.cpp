@@ -1,6 +1,4 @@
-//
-// Created by Patrick Lanzinger on 28.11.16.
-//
+
 #include <iostream>
 #include "include/ClWrapper.h"
 #include "Search.h"
