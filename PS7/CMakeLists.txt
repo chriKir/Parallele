@@ -12,7 +12,7 @@ set(serial
         ../include/dSFMT.c)
 
 set(SOURCE_FILES
-        main.cpp
+        search_cl.cpp
         ../include/ClWrapper.cpp
         ../include/dSFMT.c
         Search.cpp

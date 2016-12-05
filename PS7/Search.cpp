@@ -1,6 +1,4 @@
-//
-// Created by Patrick Lanzinger on 28.11.16.
-//
+
 
 #include <ClWrapper.h>
 #include <include/time_ms.h>
@@ -29,7 +27,7 @@ void Search::fill_array_with_random_numbers(double *array, int size) {
 void Search::execute(int iterations, int size) {
     try {
         //init
-        ClWrapper wrapper("search.cl", 0);
+        ClWrapper wrapper("search.cl", -1);
         wrapper.Build("search");
 
         VALUE data[size];

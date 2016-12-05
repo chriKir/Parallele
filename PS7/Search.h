@@ -1,6 +1,4 @@
-//
-// Created by Patrick Lanzinger on 28.11.16.
-//
+
 
 #ifndef PARALLELE_SEARCH_H
 #define PARALLELE_SEARCH_H
