@@ -21,6 +21,9 @@ public:
     }
 
     person_t *sort() {
+
+        //source
+        //http://www.geeksforgeeks.org/counting-sort/
         person_t output[number_of_people];
 
         int count[AGE];
