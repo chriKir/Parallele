@@ -75,7 +75,7 @@ void Search::execute(int iterations, int size) {
         double total_cl_time = wrapper.getTotalExecutionTime();
         std::cout << std::fixed << "Total OpenCl Profiling: " << total_cl_time << "ms, found " << total_found
                   << std::endl;
-        std::cout << std::fixed << "Total host ex. time: " << total_host_time << "ms" << std::endl;
+        //std::cout << std::fixed << "Total host ex. time: " << total_host_time << "ms" << std::endl;
         wrapper.printProfilingInfo();
 
     } catch (const cl::Error &e) {
