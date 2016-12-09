@@ -18,33 +18,31 @@ public:
     list_generator(const unsigned int number_of_people, const unsigned int ranom_init) {
         this->number_of_people = number_of_people;
 
-        people = (person_t*)malloc(sizeof(person_t) * number_of_people);
+        people = (person_t *) malloc(sizeof(person_t) * number_of_people);
         srand(ranom_init);
     }
 
-    //deconstructor
-    ~list_generator() {
-        free(people);
-    }
-
-    void generate_list() {
+    person_t *generate_list() {
         for (int i = 0; i < number_of_people; i++) {
             gen_name(people[i].name);
 
             //max age is 119
             people[i].age = rand() % 120;
         }
+        return people;
     }
 
-    void print_list() {
-        if (this->people == NULL) {
+    static void print_list(person_t *people, int count) {
+        if (people == NULL) {
             std::cout << "list has not been generated\n";
             return;
         }
 
-        for (int i = 0; i < number_of_people; i++) {
+        for (int i = 0; i < count; i++) {
             std::cout << people[i].age << "\t|| " << people[i].name << "\n";
         }
+
+        std::cout << "\n\n\n";
     }
 
 };

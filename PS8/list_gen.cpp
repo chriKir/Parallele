@@ -16,8 +16,10 @@ int main(int argc, const char *argv[]) {
     const unsigned int random_init = atoi(argv[2]);
 
     list_generator gen(number_of_people, random_init);
-    gen.generate_list();
-    gen.print_list();
+    person_t *people = gen.generate_list();
+    list_generator::print_list(people, number_of_people);
+
+    free(people);
 
 
     return EXIT_SUCCESS;
